@@ -1,0 +1,28 @@
+# Fly.io configuration for the escape-room bot.
+#
+# The bot uses long polling: it connects out to Telegram and serves no web
+# traffic. So there is deliberately NO [http_service] section - with one, Fly
+# would health-check a port nothing listens on and auto-stop the machine.
+#
+# Run exactly ONE machine (fly scale count 1): two copies would conflict on
+# Telegram and each would get its own separate database.
+
+app = "escaperoom"
+primary_region = "ams"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  DATABASE_PATH = "/data/escape_room.db"
+
+# Persistent volume for the SQLite database. Without it, every deploy or
+# restart wipes all matches.
+[mounts]
+  source = "escape_data"
+  destination = "/data"
+  initial_size = "1gb"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"

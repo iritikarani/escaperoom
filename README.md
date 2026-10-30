@@ -347,7 +347,7 @@ docker compose up -d --build
 
 Use the Dockerfile and **attach a persistent volume mounted at `/data`**:
 
-* **Fly.io:** `fly launch --no-deploy`, then `fly volumes create escape_data --size 1`, then add `[mounts] source="escape_data" destination="/data"` to `fly.toml`. Run `fly secrets set TELEGRAM_BOT_TOKEN=...` and `fly deploy`. Keep `min_machines_running = 1` and a single machine.
+* **Fly.io:** the repo includes a ready `fly.toml`. It mounts the volume `escape_data` at `/data` and deliberately has **no `[http_service]`**, because the bot serves no web traffic and Fly would otherwise auto-stop it. With the CLI: `fly launch --no-deploy` (keep the existing `fly.toml`), `fly secrets set TELEGRAM_BOT_TOKEN=...`, `fly deploy`, then `fly scale count 1`. In the dashboard's *Launch from GitHub*, add `TELEGRAM_BOT_TOKEN` as an environment variable and leave Managed Postgres unchecked. Always run a single machine. Fly volumes are mounted owned by root; `docker-entrypoint.sh` fixes the ownership and then drops to the unprivileged `bot` user.
 * **Railway:** add a Volume to the service with mount path `/data`, and set the `TELEGRAM_BOT_TOKEN` variable.
 * **Render:** use a *Background Worker* with a *Persistent Disk* mounted at `/data`. Paid plans only; free instances have no persistent disk.
 

@@ -114,6 +114,7 @@ def _miniapp_api(environ, start_response, action: str):
         return _json(start_response, "400 Bad Request", {"ok": False, "error": "bad_request"})
     user = verify_init_data(str(payload.get("initData", "")), svc.settings.bot_token)
     if user is None:
+        log.warning("Mini App request rejected: initData missing, expired or not signed by this bot")
         return _json(start_response, "401 Unauthorized", {"ok": False, "error": "unauthorized"})
 
     svc.matchmaking.register_user(user["id"], user.get("first_name"), user.get("last_name"),

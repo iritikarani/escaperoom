@@ -363,7 +363,8 @@
     if (busy) return;
     try { const r = await api("state"); render(r.state); }
     catch (e) {
-      if (e.message === "unauthorized") message("🔒", "Open this from Telegram", "This room only works inside Telegram, from the bot's “Enter the room” button.");
+      if (e.message === "unauthorized") message("🔒", "Couldn't verify your Telegram session",
+        "Close this window and open the room again from the bot. If it keeps happening, tell the bot's owner.");
     }
   }
 

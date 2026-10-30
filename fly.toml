@@ -7,7 +7,7 @@
 # Run exactly ONE machine (fly scale count 1): two copies would conflict on
 # Telegram and each would get its own separate database.
 
-app = "escaperoom"
+app = "escaperoom-n1sueg"
 primary_region = "ams"
 
 [build]
@@ -19,7 +19,7 @@ primary_region = "ams"
 # Persistent volume for the SQLite database. Without it, every deploy or
 # restart wipes all matches.
 [mounts]
-  source = "escape_data"
+  source = "data"
   destination = "/data"
   initial_size = "1gb"
 

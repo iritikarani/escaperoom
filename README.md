@@ -192,6 +192,8 @@ escape_room_bot/
 ├── notifications.py     Transactional outbox + reliable Telegram delivery
 ├── messages.py          All user-facing text (HTML templates)
 ├── backup.py            Online SQLite backup
+├── webhook_app.py       WSGI entry point for webhook hosting (PythonAnywhere)
+├── pythonanywhere_setup.py  One-command PythonAnywhere setup
 ├── puzzles/puzzles.json
 ├── assets/puzzle_images/
 ├── tests/               pytest suite (139 tests)
@@ -350,6 +352,37 @@ Use the Dockerfile and **attach a persistent volume mounted at `/data`**:
 * **Fly.io:** the repo includes a ready `fly.toml`. It mounts the volume `data` at `/data` and deliberately has **no `[http_service]`**, because the bot serves no web traffic and Fly would otherwise auto-stop it. With the CLI: `fly launch --no-deploy` (keep the existing `fly.toml`), `fly secrets set TELEGRAM_BOT_TOKEN=...`, `fly deploy`, then `fly scale count 1`. In the dashboard's *Launch from GitHub*, add `TELEGRAM_BOT_TOKEN` as an environment variable and leave Managed Postgres unchecked. Always run a single machine. Fly volumes are mounted owned by root; `docker-entrypoint.sh` fixes the ownership and then drops to the unprivileged `bot` user.
 * **Railway:** add a Volume to the service with mount path `/data`, and set the `TELEGRAM_BOT_TOKEN` variable.
 * **Render:** use a *Background Worker* with a *Persistent Disk* mounted at `/data`. Paid plans only; free instances have no persistent disk.
+
+### Option D: PythonAnywhere, free, no card (webhook mode)
+
+PythonAnywhere's free plan can't run a program 24/7, but it can host a small web app for free, without a card. In this mode Telegram sends each update to `https://<username>.pythonanywhere.com/telegram`, and `webhook_app.py` handles it. Everything is done in the browser, so it also works from an iPad or phone.
+
+1. **Create a free account** at [pythonanywhere.com](https://www.pythonanywhere.com/).
+2. **Create the web app.** On the **Web** tab: *Add a new web app* → *Next* → **Manual configuration** → **Python 3.11** or newer → *Next*.
+3. **Get the code and install it.** On the **Consoles** tab, start a **Bash** console and run:
+   ```bash
+   git clone https://github.com/<owner>/<repo>.git escaperoom
+   cd escaperoom
+   python3.11 -m venv .venv          # same Python version as the web app
+   .venv/bin/pip install -r requirements.txt
+   ```
+   For a private repository, use `https://<github-username>:<token>@github.com/<owner>/<repo>.git`, where `<token>` is a GitHub personal access token with read access to the repository.
+4. **Run the setup script** in the same console:
+   ```bash
+   .venv/bin/python pythonanywhere_setup.py
+   ```
+   Paste the bot token when asked (it isn't shown as you type). The script writes `.env` (the token, a random webhook secret and PythonAnywhere's outbound proxy), creates the database, points the web app's WSGI file at the bot, and registers the webhook with Telegram.
+5. **Set the virtualenv.** On the **Web** tab, under *Virtualenv*, enter `/home/<username>/escaperoom/.venv`.
+6. Press the green **Reload** button, then send `/start` to the bot.
+
+**Upkeep and limits**
+
+* Free web apps must be renewed every three months: Web tab → **Run until 3 months from today**.
+* With no background loop, retries of undelivered messages and lobby expiry run whenever an update arrives. For quiet periods, add a daily task on the **Tasks** tab: `/home/<username>/escaperoom/.venv/bin/python /home/<username>/escaperoom/bot.py --maintenance`.
+* Free accounts get a daily CPU allowance (shown on the dashboard). Normal play uses a small fraction of it.
+* **Updating:** in a Bash console run `cd escaperoom && git pull && .venv/bin/pip install -r requirements.txt`, then press **Reload**.
+* **Errors:** see the *Error log* link on the Web tab.
+* **Switching back to polling** elsewhere: run `.venv/bin/python pythonanywhere_setup.py --remove-webhook` first.
 
 On any platform, check that a redeploy keeps the data: create a lobby, redeploy, and run `/status`.
 

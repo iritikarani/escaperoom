@@ -100,6 +100,8 @@ When the bot runs in webhook mode (for example on PythonAnywhere), players can a
 * a race track shows your progress and your opponent's, plus a live timer,
 * when you solve a room, the door swings open and the next room loads.
 
+When a chat can open the room screen, the bot no longer posts the puzzle text there. The chat gets a short "Room N is ready" message with the **Enter the room** button, and the puzzle is revealed inside the room. Chats without the button (for example a 2v2 group without a direct link) still get the full puzzle as text, as before. Typed answers in the chat keep working either way.
+
 It's the same game: answers and hints from the room screen go through the same rules as chat commands, so free hints, opponent alerts and winner detection all still apply. Players can switch between the room screen and the chat at any time.
 
 **Where the button appears**

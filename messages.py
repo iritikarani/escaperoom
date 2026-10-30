@@ -76,6 +76,20 @@ def app_guess_echo(name: str, guess: str, correct: bool) -> str:
     return f"🔎 <b>{escape(name)}</b> tried <code>{escape(guess[:100])}</code> in the room - {verdict}"
 
 
+def room_ready_message(puzzle: Puzzle, header: str | None = None) -> str:
+    """Room announcement for chats that play in the room screen: no puzzle text."""
+    lines = []
+    if header:
+        lines += [header, ""]
+    lines += [
+        f"🚪 <b>ROOM {puzzle.room} / {TOTAL_ROOMS}</b>  ·  <i>{escape(puzzle.difficulty)}</i>",
+        "",
+        "The door creaks open... your puzzle is waiting inside.",
+        "Tap <b>Enter the room</b> below to step in. 👇",
+    ]
+    return "\n".join(lines)
+
+
 def unlock_header(solved_room: int, solver: str | None) -> str:
     by = f" (solved by {escape(solver)})" if solver else ""
     return (

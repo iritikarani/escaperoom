@@ -237,6 +237,9 @@ class PuzzleCache:
         self._cache: dict[str, PuzzleSet] = {}
         self._max = max_size
 
+    def forget(self, match_id: str) -> None:
+        self._cache.pop(match_id, None)
+
     def for_match(self, match: sqlite3.Row) -> PuzzleSet:
         key = match["match_id"]
         puzzles = self._cache.get(key)

@@ -107,13 +107,14 @@ def test_simultaneous_final_answers_produce_one_winner(world):
         match_id = world.setup_1v1(a, b)
         world.solve(a, a, "private", range(1, 7))
         world.solve(b, b, "private", range(1, 7))
+        answer7 = world.answer_for(a, 7)
         (db1, e1, _), (db2, e2, _) = _engines(world, 2)
         barrier = threading.Barrier(2)
         results = {}
 
         def go(name, engine, uid):
             barrier.wait()
-            results[name] = engine.submit_answer(uid, uid, "private", ANSWERS[7])
+            results[name] = engine.submit_answer(uid, uid, "private", answer7)
 
         threads = [threading.Thread(target=go, args=("a", e1, a)), threading.Thread(target=go, args=("b", e2, b))]
         for t in threads:

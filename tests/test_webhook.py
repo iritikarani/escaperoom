@@ -7,6 +7,7 @@ import pytest
 
 import pythonanywhere_setup as setup
 import webhook_app
+from tests.conftest import match_answer
 from tests.test_e2e import FakeTelegram, callback, codes_in, message
 
 SECRET = "s3cret-value"
@@ -65,7 +66,7 @@ def test_full_1v1_over_webhook(wsgi):
     code = codes_in(fake.sent_to(1))[0]
     call(message(2, "Bob", f"/start {code}"))
     assert "ROOM 1 / 7" in fake.sent_to(1) and "ROOM 1 / 7" in fake.sent_to(2)
-    call(message(1, "Alice", "369"))
+    call(message(1, "Alice", match_answer(webhook_app._app.bot_data["services"].db, 1, 1)))
     assert "ROOM 2 UNLOCKED" in fake.sent_to(1)
     assert "Your opponent just reached <b>Room 2</b>" in fake.sent_to(2)
 

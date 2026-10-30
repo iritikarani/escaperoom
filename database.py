@@ -212,8 +212,51 @@ SCHEMA_V1: list[str] = [
     "CREATE INDEX idx_join_failures_user_time ON join_failures(user_id, created_at)",
 ]
 
+# Puzzle bank (10,000 sets x 7 puzzles), per-player puzzle history and the
+# record of every 7-puzzle combination handed out. See puzzle_bank.py.
+SCHEMA_V2: list[str] = [
+    """
+    CREATE TABLE puzzle_bank (
+        puzzle_id  TEXT PRIMARY KEY,
+        set_id     TEXT NOT NULL,
+        position   INTEGER NOT NULL CHECK (position BETWEEN 1 AND 7),
+        category   TEXT NOT NULL,
+        difficulty TEXT NOT NULL,
+        source     TEXT NOT NULL DEFAULT 'generated' CHECK (source IN ('generated', 'curated')),
+        answer_key TEXT NOT NULL,
+        data       TEXT NOT NULL
+    )
+    """,
+    "CREATE INDEX idx_puzzle_bank_position ON puzzle_bank(position)",
+    "CREATE INDEX idx_puzzle_bank_set ON puzzle_bank(set_id)",
+    # One row per player per puzzle per match in which the puzzle was shown
+    # to them. Keyed by Telegram user id, the player's permanent identity.
+    """
+    CREATE TABLE player_puzzle_history (
+        user_id   INTEGER NOT NULL REFERENCES users(user_id),
+        puzzle_id TEXT NOT NULL,
+        match_id  TEXT NOT NULL REFERENCES matches(match_id) ON DELETE CASCADE,
+        room      INTEGER NOT NULL,
+        seen_at   REAL NOT NULL,
+        PRIMARY KEY (user_id, puzzle_id, match_id)
+    )
+    """,
+    "CREATE INDEX idx_player_puzzle_history_puzzle ON player_puzzle_history(puzzle_id)",
+    # Every combination handed out, keyed by its sorted puzzle ids so the
+    # same seven puzzles in a different order still count as a repeat.
+    """
+    CREATE TABLE match_combinations (
+        combination_key TEXT PRIMARY KEY,
+        match_id        TEXT NOT NULL UNIQUE REFERENCES matches(match_id) ON DELETE CASCADE,
+        puzzle_ids      TEXT NOT NULL,
+        created_at      REAL NOT NULL
+    )
+    """,
+]
+
 MIGRATIONS: list[tuple[int, str, Sequence[str]]] = [
     (1, "initial schema", SCHEMA_V1),
+    (2, "puzzle bank, player puzzle history, match combinations", SCHEMA_V2),
 ]
 
 

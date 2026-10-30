@@ -166,6 +166,38 @@ How this works:
 
 ---
 
+## Puzzle bank and fair puzzle mixing
+
+The game ships with a bank of **10,000 original puzzle sets of 7 puzzles each (70,000 puzzles)** in `puzzles/bank/bank.jsonl.gz`, plus the hand-written puzzles in `puzzles/puzzles.json`.
+
+**How a match gets its puzzles.** When a match starts (once every player has joined), the bot builds one combination of 7 puzzles for that match:
+
+1. It checks the puzzle history of **every** participant: both players in 1v1, all four in 2v2. Players are recognised by their Telegram account ID, so history follows them across devices, chats and the room screen.
+2. For each room it ranks the puzzles of **all** sets: first those that **no** participant has seen, then those seen by the fewest participants, then the least-often seen, with random tie-breaks. Room N always draws from position N of the sets, which keeps the Easy → Expert progression while still mixing puzzles from different sets.
+3. It never uses the same puzzle or the same answer twice in one match.
+4. It never hands out an exact combination of 7 puzzles that was used before (`match_combinations`; order doesn't matter). If the preferred combination was used, it searches for the next-fairest unused one.
+5. The combination is saved with the match. Every player in the match gets exactly these 7 puzzles, in the same order.
+
+If a room has run out of puzzles nobody has seen, it falls back to the least-seen ones, so a match can always start.
+
+**What counts as "seen".** A puzzle is added to a player's history when its room is delivered to that player's side. Rooms a side never reached don't count. Matches played before this feature are added to history by `python bot.py --init-db`.
+
+**Loading the bank.** Run `python bot.py --init-db` (the PythonAnywhere setup script does this too). It imports the bank into the database in a few seconds, adds the database tables, and is safe to run again. Until the bank is loaded, the bot uses only `puzzles.json`, with the same fairness rules.
+
+**The puzzles.** `puzzle_generator.py` builds the bank deterministically from a fixed seed (`python puzzle_generator.py` reproduces the file byte-for-byte). Each of the 7 positions has its own puzzle types:
+
+| Room | Difficulty | Types |
+|---|---|---|
+| 1 | Easy | fact locks, arithmetic locks |
+| 2 | Easy | number sequences (six kinds) |
+| 3 | Medium | Caesar and Atbash ciphers |
+| 4 | Medium | first-letter, numbered and last-letter word puzzles |
+| 5 | Hard | ordering logic puzzles with a unique solution |
+| 6 | Hard | number codes, reverse alphabet, binary lamps, phone keypad |
+| 7 | Expert | multi-clue keypads, scattered-letter words |
+
+Every puzzle is checked when it's generated, and the tests check all 70,000 again independently: codes and ciphers are decoded back to their answer, and logic puzzles are brute-forced to prove exactly one solution. Puzzles are unique by content. Word answers come from a fixed vocabulary, so the same answer word can appear in different puzzles.
+
 ## Adding or replacing puzzles
 
 All puzzle content is in **`puzzles/puzzles.json`**. The Python code contains none. The file is a **pool**: list as many puzzles per room as you like, and each new match draws one per room at random.
@@ -215,6 +247,8 @@ escape_room_bot/
 ├── hint_manager.py      Paid hints + automatic free hints
 ├── answer_validator.py  Answer normalisation and comparison
 ├── puzzle_manager.py    Load/validate puzzles.json, per-match snapshots
+├── puzzle_bank.py       Puzzle bank import, player history, fair per-match selection
+├── puzzle_generator.py  Builds and verifies the 10,000-set bank
 ├── notifications.py     Transactional outbox + reliable Telegram delivery
 ├── messages.py          All user-facing text (HTML templates)
 ├── backup.py            Online SQLite backup

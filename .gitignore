@@ -28,3 +28,6 @@ build/
 .idea/
 .vscode/
 .DS_Store
+
+# Release archives
+*.zip

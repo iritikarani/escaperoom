@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "title": "The Clockmaker's Vault",
   "puzzles": [
     {
@@ -9,14 +9,55 @@
       "question": "A rusty padlock with three number wheels hangs on the first door. A note is tied to it:\n\n\"My first digit is the number of sides on a triangle.\nMy second digit is double my first.\nMy last digit is the sum of the other two.\"\n\nWhat is the 3-digit code?",
       "image": null,
       "image_caption": null,
-      "accepted_answers": ["369"],
+      "accepted_answers": [
+        "369"
+      ],
       "hints": [
         "Work through the clues in order - each one gives you one digit.",
         "A triangle has 3 sides, so the code starts with 3.",
         "3, then 3 x 2 = 6, then 3 + 6 = 9."
       ],
       "solution": "369",
-      "explanation": "Triangle = 3 sides; double it = 6; 3 + 6 = 9."
+      "explanation": "Triangle = 3 sides; double it = 6; 3 + 6 = 9.",
+      "id": "padlock-triangle"
+    },
+    {
+      "id": "bike-lock-calendar",
+      "room": 1,
+      "title": "The Bicycle Chain",
+      "difficulty": "Easy",
+      "question": "A bicycle is chained to the first door with a 4-digit lock. A sticker on the frame reads:\n\n\"My first two digits are the number of months in a year.\nMy last two digits are the number of hours in a day.\"\n\nWhat is the 4-digit code?",
+      "image": null,
+      "image_caption": null,
+      "accepted_answers": [
+        "1224"
+      ],
+      "hints": [
+        "The code is made of two 2-digit numbers placed side by side.",
+        "There are 12 months in a year - those are the first two digits.",
+        "A day has 24 hours: 12 followed by 24."
+      ],
+      "solution": "1224",
+      "explanation": "12 months + 24 hours = 1224."
+    },
+    {
+      "id": "padlock-week",
+      "room": 1,
+      "title": "The Weekday Padlock",
+      "difficulty": "Easy",
+      "question": "A heavy padlock with three number wheels guards the first door. Scratched into the metal:\n\n\"My first digit is the number of days in a week.\nMy second digit is my first digit minus five.\nMy last digit is the sum of the other two.\"\n\nWhat is the 3-digit code?",
+      "image": null,
+      "image_caption": null,
+      "accepted_answers": [
+        "729"
+      ],
+      "hints": [
+        "Work out each digit in order.",
+        "A week has 7 days, so the code starts with 7.",
+        "7, then 7 - 5 = 2, then 7 + 2 = 9."
+      ],
+      "solution": "729",
+      "explanation": "7 days; 7 - 5 = 2; 7 + 2 = 9."
     },
     {
       "room": 2,
@@ -25,14 +66,60 @@
       "question": "Above the second door, something speaks in a riddle:\n\n\"I hang on the wall all day and all night.\nI never take a single step, yet I keep on running.\nI have a face with no eyes, and hands that can hold nothing.\"\n\nWhat am I? (one word)",
       "image": null,
       "image_caption": null,
-      "accepted_answers": ["clock", "wall clock"],
+      "accepted_answers": [
+        "clock",
+        "wall clock"
+      ],
       "hints": [
         "\"Running\" doesn't have to mean legs - think of something that keeps going.",
         "Its face and hands are made of numbers and pointers.",
         "It tells you the time."
       ],
       "solution": "A clock",
-      "explanation": "A wall clock hangs on the wall, 'runs' constantly, and has a face and hands."
+      "explanation": "A wall clock hangs on the wall, 'runs' constantly, and has a face and hands.",
+      "id": "riddle-clock"
+    },
+    {
+      "id": "riddle-book",
+      "room": 2,
+      "title": "The Silent Storyteller",
+      "difficulty": "Easy",
+      "question": "A dusty shelf holds a single object and a note:\n\n\"I have a spine but no bones,\nmany leaves but no branches,\nand I tell whole stories without saying a word.\"\n\nWhat am I? (one word)",
+      "image": null,
+      "image_caption": null,
+      "accepted_answers": [
+        "book",
+        "books"
+      ],
+      "hints": [
+        "The 'leaves' aren't from a tree - think of pages.",
+        "You'll find me in a library.",
+        "You read me."
+      ],
+      "solution": "A book",
+      "explanation": "A book has a spine, leaves (pages) and tells stories silently."
+    },
+    {
+      "id": "riddle-rain",
+      "room": 2,
+      "title": "The Window Tapper",
+      "difficulty": "Easy",
+      "question": "Something keeps tapping on the window of the second room. A voice whispers:\n\n\"I fall from the sky but have no wings.\nI tap on your window and fill the puddles in the street,\nand an umbrella is your best defence against me.\"\n\nWhat am I? (one word)",
+      "image": null,
+      "image_caption": null,
+      "accepted_answers": [
+        "rain",
+        "raindrops",
+        "rainfall",
+        "rainwater"
+      ],
+      "hints": [
+        "Think about the weather.",
+        "It's wet, and it makes puddles.",
+        "You open an umbrella when it starts to ..."
+      ],
+      "solution": "Rain",
+      "explanation": "Rain falls from the sky, taps on windows, fills puddles and is stopped by umbrellas."
     },
     {
       "room": 3,
@@ -41,14 +128,55 @@
       "question": "Scratched into the third door are two strange words:\n\n<b>KLGGHQ GRRU</b>\n\nBelow them, someone has carved a tiny reminder: <b>A → D</b>\n\nDecode the message. The two words are the password.",
       "image": null,
       "image_caption": null,
-      "accepted_answers": ["hidden door"],
+      "accepted_answers": [
+        "hidden door"
+      ],
       "hints": [
         "Every letter has been replaced by another letter the same distance along the alphabet.",
         "A became D, so every letter was shifted 3 places forward. Shift each one 3 places back.",
         "K → H, L → I, G → D ... the first word is HIDDEN."
       ],
       "solution": "HIDDEN DOOR",
-      "explanation": "A Caesar cipher with a shift of 3: K-L-G-G-H-Q → H-I-D-D-E-N, G-R-R-U → D-O-O-R."
+      "explanation": "A Caesar cipher with a shift of 3: K-L-G-G-H-Q → H-I-D-D-E-N, G-R-R-U → D-O-O-R.",
+      "id": "caesar-hidden-door"
+    },
+    {
+      "id": "atbash-secret-tunnel",
+      "room": 3,
+      "title": "The Mirror Alphabet",
+      "difficulty": "Medium",
+      "question": "Painted across the third door:\n\n<b>HVXIVG GFMMVO</b>\n\nIn the corner, a tiny diagram: <b>A ↔ Z, B ↔ Y, C ↔ X ...</b>\n\nDecode the two words to find the password.",
+      "image": null,
+      "image_caption": null,
+      "accepted_answers": [
+        "secret tunnel"
+      ],
+      "hints": [
+        "The alphabet has been folded in half: the first letter swaps with the last.",
+        "Each letter swaps with its mirror: A↔Z, B↔Y, ... H↔S, V↔E.",
+        "H → S, V → E, X → C ... the first word is SECRET."
+      ],
+      "solution": "SECRET TUNNEL",
+      "explanation": "An Atbash cipher: H-V-X-I-V-G → S-E-C-R-E-T, G-F-M-M-V-O → T-U-N-N-E-L."
+    },
+    {
+      "id": "shift-back-golden-gate",
+      "room": 3,
+      "title": "The Backward Step",
+      "difficulty": "Medium",
+      "question": "A brass plate on the third door shows:\n\n<b>FNKCDM FZSD</b>\n\nUnderneath, an arrow is engraved: <b>B → A</b>\n\nDecode the two words. They are the password.",
+      "image": null,
+      "image_caption": null,
+      "accepted_answers": [
+        "golden gate"
+      ],
+      "hints": [
+        "Each letter was swapped for a neighbour in the alphabet.",
+        "B became A, so every letter moved one place backwards. Move each one forward again.",
+        "F → G, N → O, K → L ... the first word is GOLDEN."
+      ],
+      "solution": "GOLDEN GATE",
+      "explanation": "Every letter was shifted back by one: F-N-K-C-D-M → G-O-L-D-E-N, F-Z-S-D → G-A-T-E."
     },
     {
       "room": 4,
@@ -57,14 +185,55 @@
       "question": "A locksmith's workbench is covered in labels with a word cut out of each one. The same single word fits every gap:\n\n• SKELETON ____\n• ____HOLE\n• ____BOARD\n• ____STONE\n• ____NOTE\n\nWhat is the missing word?",
       "image": null,
       "image_caption": null,
-      "accepted_answers": ["key"],
+      "accepted_answers": [
+        "key"
+      ],
       "hints": [
         "It's a short word, and you're in a locksmith's workshop.",
         "A pianist uses one of the ____BOARD words; an architect needs a ____STONE to hold an arch together.",
         "It's what opens a lock: a ____HOLE is where you put it."
       ],
       "solution": "KEY",
-      "explanation": "Skeleton key, keyhole, keyboard, keystone, keynote."
+      "explanation": "Skeleton key, keyhole, keyboard, keystone, keynote.",
+      "id": "missing-word-key"
+    },
+    {
+      "id": "anagram-silent",
+      "room": 4,
+      "title": "The Guard's Instruction",
+      "difficulty": "Medium",
+      "question": "A sign above a sleeping guard reads <b>LISTEN</b>. Underneath, in smaller letters:\n\n\"Rearrange my letters to find what you must be if you want to sneak past me - a word meaning <i>making no sound at all</i>.\"\n\nWhat is the word?",
+      "image": null,
+      "image_caption": null,
+      "accepted_answers": [
+        "silent"
+      ],
+      "hints": [
+        "Use every letter of LISTEN exactly once.",
+        "The new word is an adjective describing a very quiet person.",
+        "It starts with S: S _ L _ N _."
+      ],
+      "solution": "SILENT",
+      "explanation": "LISTEN is an anagram of SILENT."
+    },
+    {
+      "id": "compound-light",
+      "room": 4,
+      "title": "The Lighthouse Keeper's Puzzle",
+      "difficulty": "Medium",
+      "question": "The lighthouse keeper left a puzzle. One word completes every pair - it joins onto the end of the first word and the start of the second:\n\n• SUN ____ HOUSE\n• MOON ____ YEAR\n• FLASH ____ NING\n\nWhat is the word?",
+      "image": null,
+      "image_caption": null,
+      "accepted_answers": [
+        "light"
+      ],
+      "hints": [
+        "Each pair makes two compound words, e.g. SUN+____ and ____+HOUSE.",
+        "Ships at sea are warned by a ____HOUSE.",
+        "Sunlight, lighthouse, moonlight ..."
+      ],
+      "solution": "LIGHT",
+      "explanation": "Sunlight/lighthouse, moonlight/light year, flashlight/lightning."
     },
     {
       "room": 5,
@@ -73,14 +242,62 @@
       "question": "Three chests stand before you: one made of <b>OAK</b>, one of <b>IRON</b> and one of <b>GLASS</b> (frosted - you can't see inside). Exactly one chest holds the key to the next door.\n\nEach chest has an inscription, and <b>exactly one</b> of the three inscriptions is true:\n\n🪵 OAK: \"The key is in this chest.\"\n⚙️ IRON: \"The key is not in this chest.\"\n🔮 GLASS: \"The key is not in the oak chest.\"\n\nWhich chest holds the key?",
       "image": null,
       "image_caption": null,
-      "accepted_answers": ["iron", "iron chest"],
+      "accepted_answers": [
+        "iron",
+        "iron chest"
+      ],
       "hints": [
         "Try each chest in turn: assume the key is there and count how many inscriptions would be true.",
         "If the key were in the oak chest, both OAK's and IRON's inscriptions would be true - that's too many.",
         "If the key were in the glass chest, IRON's and GLASS's inscriptions would both be true. Only one chest leaves exactly one true inscription."
       ],
       "solution": "The IRON chest",
-      "explanation": "Key in iron: OAK false, IRON false, GLASS true - exactly one true statement. The other two placements give two true statements."
+      "explanation": "Key in iron: OAK false, IRON false, GLASS true - exactly one true statement. The other two placements give two true statements.",
+      "id": "three-chests"
+    },
+    {
+      "id": "hooks-four-keys",
+      "room": 5,
+      "title": "The Four Hooks",
+      "difficulty": "Hard",
+      "question": "Four keys hang on four hooks in a row, numbered 1 to 4 from left to right: one <b>BRASS</b>, one <b>SILVER</b>, one <b>COPPER</b> and one <b>GOLD</b>. The door opens with the key on <b>hook 3</b>.\n\nYou know that:\n• The gold key hangs directly to the right of the silver key.\n• The brass key is not on either end hook.\n• The copper key hangs somewhere to the left of the brass key.\n\nWhich key is on hook 3?",
+      "image": null,
+      "image_caption": null,
+      "accepted_answers": [
+        "silver",
+        "silver key"
+      ],
+      "hints": [
+        "Start with the brass key: it can only be on hook 2 or hook 3.",
+        "Silver and gold must be next to each other, with gold on the right.",
+        "If brass were on hook 3, silver and gold couldn't sit side by side. So brass is on hook 2 and copper on hook 1."
+      ],
+      "solution": "The SILVER key",
+      "explanation": "Copper 1, brass 2, silver 3, gold 4 is the only arrangement that fits every clue."
+    },
+    {
+      "id": "mislabelled-boxes",
+      "room": 5,
+      "title": "The Mislabelled Boxes",
+      "difficulty": "Hard",
+      "question": "Three closed boxes are labelled <b>RUBIES</b>, <b>PEARLS</b> and <b>RUBIES AND PEARLS</b>. One box holds only rubies, one only pearls, and one a mix of both - but <b>every label is wrong</b>.\n\nYou reach into the box labelled <b>RUBIES AND PEARLS</b> and pull out a single ruby.\n\nWhat does the box labelled <b>PEARLS</b> contain?",
+      "image": null,
+      "image_caption": null,
+      "accepted_answers": [
+        "rubies and pearls",
+        "pearls and rubies",
+        "both",
+        "a mix",
+        "mixed",
+        "a mix of both"
+      ],
+      "hints": [
+        "The box labelled RUBIES AND PEARLS can't really hold a mix - its label is wrong.",
+        "You drew a ruby from it, so that box must hold only rubies.",
+        "The PEARLS box can't hold pearls (wrong label) or only rubies (already taken)."
+      ],
+      "solution": "RUBIES AND PEARLS",
+      "explanation": "'Rubies and pearls' box = rubies only; 'Pearls' box = the mix; 'Rubies' box = pearls only."
     },
     {
       "room": 6,
@@ -89,14 +306,55 @@
       "question": "A dusty ledger lies open on the lantern-maker's desk. One line of numbers is circled:\n\n<b>25 · 3 · 29 · 41 · 11 · 37 · 29</b>\n\nIn the margin, the lantern-maker wrote:\n\"Each number was once a letter (A = 1, B = 2 ... Z = 26). I doubled every letter, then added one. To read my secret, undo what I did - in reverse.\"\n\nWhat is the secret word?",
       "image": null,
       "image_caption": null,
-      "accepted_answers": ["lantern"],
+      "accepted_answers": [
+        "lantern"
+      ],
       "hints": [
         "Reverse the steps: first subtract 1, then halve.",
         "25 → 24 → 12, which is the letter L. 3 → 2 → 1, which is A.",
         "The numbers become 12 · 1 · 14 · 20 · 5 · 18 · 14. Look at the title of this room."
       ],
       "solution": "LANTERN",
-      "explanation": "(n - 1) / 2 gives 12, 1, 14, 20, 5, 18, 14 = L, A, N, T, E, R, N."
+      "explanation": "(n - 1) / 2 gives 12, 1, 14, 20, 5, 18, 14 = L, A, N, T, E, R, N.",
+      "id": "ledger-lantern"
+    },
+    {
+      "id": "phone-keypad-compass",
+      "room": 6,
+      "title": "The Old Telephone",
+      "difficulty": "Hard",
+      "question": "An old mobile phone lies on the desk. Its last message, written the old-fashioned way, is still on the screen:\n\n<b>222 · 666 · 6 · 7 · 2 · 7777 · 7777</b>\n\nA sticky note on the back says: \"Remember when you had to press a key several times to get one letter?\"\n\nWhat is the message?",
+      "image": null,
+      "image_caption": null,
+      "accepted_answers": [
+        "compass"
+      ],
+      "hints": [
+        "Each group of digits is one letter, typed on a phone keypad.",
+        "Key 2 holds ABC: 2 = A, 22 = B, 222 = C. Key 7 holds PQRS.",
+        "222 = C, 666 = O, 6 = M, 7 = P, 2 = A, 7777 = S."
+      ],
+      "solution": "COMPASS",
+      "explanation": "Multi-tap phone keypad: 222=C, 666=O, 6=M, 7=P, 2=A, 7777=S, 7777=S."
+    },
+    {
+      "id": "binary-mirror",
+      "room": 6,
+      "title": "The Blinking Lights",
+      "difficulty": "Hard",
+      "question": "A row of five lamps blinks out a pattern, then pauses. You copy down six patterns (● = on, ○ = off):\n\n<code>○●●○●\n○●○○●\n●○○●○\n●○○●○\n○●●●●\n●○○●○</code>\n\nA plaque says: \"Lamps are worth 16, 8, 4, 2 and 1 from left to right. Add up the lit lamps to find each letter's place in the alphabet (A = 1).\"\n\nWhat is the word?",
+      "image": null,
+      "image_caption": null,
+      "accepted_answers": [
+        "mirror"
+      ],
+      "hints": [
+        "Each line is one letter. Add the values of the lamps that are on.",
+        "The first line ○●●○● is 8 + 4 + 1 = 13, which is the letter M.",
+        "The totals are 13, 9, 18, 18, 15, 18."
+      ],
+      "solution": "MIRROR",
+      "explanation": "Binary: 13-9-18-18-15-18 = M-I-R-R-O-R."
     },
     {
       "room": 7,
@@ -105,14 +363,55 @@
       "question": "The final hatch is sealed by a 4-digit keypad. Five clues are hidden around the room:\n\n📜 On the desk: \"All four digits are different, and none of them is zero.\"\n🕯️ On the candle: \"The second digit is three times the first.\"\n🗺️ On the map: \"The third digit equals the number of rooms you have already escaped.\"\n🪞 On the mirror: \"The first and last digits add up to ten.\"\n🔢 On the keypad: \"The last digit is a perfect square.\"\n\nEnter the 4-digit code to escape!",
       "image": null,
       "image_caption": null,
-      "accepted_answers": ["1369"],
+      "accepted_answers": [
+        "1369"
+      ],
       "hints": [
         "You are in Room 7, so you have already escaped 6 rooms. That's the third digit.",
         "If the second digit is three times the first, the first digit can only be 1, 2 or 3. One of those clashes with the third digit.",
         "First digit 1 gives a last digit of 9 (a perfect square). First digit 3 gives a last digit of 7, which is not."
       ],
       "solution": "1369",
-      "explanation": "Third digit = 6. First digit is 1, 2 or 3 (second = 3x first); 2 gives 2-6-6-8 with a repeated 6. Last digit = 10 - first: 9 (square) for 1, 7 (not square) for 3. Code: 1-3-6-9."
+      "explanation": "Third digit = 6. First digit is 1, 2 or 3 (second = 3x first); 2 gives 2-6-6-8 with a repeated 6. Last digit = 10 - first: 9 (square) for 1, 7 (not square) for 3. Code: 1-3-6-9.",
+      "id": "keypad-1369"
+    },
+    {
+      "id": "keypad-6427",
+      "room": 7,
+      "title": "The Vault Door",
+      "difficulty": "Expert",
+      "question": "The final vault door has a 4-digit keypad. Five clues are scratched into the walls:\n\n🔢 \"All four digits are different, and none of them is zero.\"\n🚪 \"The last digit is the number of the room you are standing in.\"\n➗ \"The second digit is twice the third.\"\n➕ \"The first digit is the second digit plus the third.\"\n🧮 \"All four digits add up to 19.\"\n\nEnter the code to escape!",
+      "image": null,
+      "image_caption": null,
+      "accepted_answers": [
+        "6427"
+      ],
+      "hints": [
+        "You're in Room 7, so the code ends in 7.",
+        "Try small values for the third digit: if it's 1, the second is 2 and the first is 3. If it's 2, the second is 4 and the first is 6.",
+        "Check each option's digit sum with the 7 included: only one makes 19."
+      ],
+      "solution": "6427",
+      "explanation": "Third digit t, second 2t, first 3t, last 7: 6t + 7 = 19 gives t = 2, so 6-4-2-7."
+    },
+    {
+      "id": "scattered-letters-outside",
+      "room": 7,
+      "title": "The Scattered Letters",
+      "difficulty": "Expert",
+      "question": "The exit word has been broken into seven letters and scattered around the room. Each clue is tagged with a Roman numeral telling you where its letter goes in the word:\n\n(IV) The 19th letter of the alphabet.\n(I) The letter shaped like a perfect circle.\n(VII) The letter that appears three times in ELEVEN.\n(III) The letter that sounds like a hot drink.\n(VI) The 4th letter of the alphabet.\n(II) The letter that sounds like \"you\".\n(V) The letter that sounds like \"eye\".\n\nWhat is the exit word - and where are you about to be?",
+      "image": null,
+      "image_caption": null,
+      "accepted_answers": [
+        "outside"
+      ],
+      "hints": [
+        "Solve each clue first, then put the letters in Roman-numeral order: I, II, III, IV, V, VI, VII.",
+        "(I) is O, (II) is U and (III) is T.",
+        "The letters are O, U, T, S, I, D, E."
+      ],
+      "solution": "OUTSIDE",
+      "explanation": "I=O, II=U, III=T, IV=S, V=I, VI=D, VII=E."
     }
   ]
 }

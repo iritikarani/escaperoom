@@ -2,7 +2,9 @@ import json
 
 from tests.conftest import GROUP_A, GROUP_B, PUZZLES_PATH
 
-HINTS = {p["room"]: p["hints"] for p in json.loads(PUZZLES_PATH.read_text())["puzzles"]}
+HINTS = {}
+for _p in json.loads(PUZZLES_PATH.read_text())["puzzles"]:
+    HINTS.setdefault(_p["room"], _p["hints"])  # first puzzle per room (fixed draw)
 
 
 def last_kind(world, chat, kind):

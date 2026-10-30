@@ -32,7 +32,7 @@ The project is built with Python 3.11+, python-telegram-bot v21/v22 (async), SQL
 * Inline-keyboard main menu: **Create Match · Join Match · How to Play · Help**.
 * 1v1 and 2v2 modes. Join codes are generated with `secrets`. Invitations use Telegram deep links: `?start=` for 1v1 and `?startgroup=` for 2v2, which adds the bot to a group.
 * The match starts automatically once every seat is filled and both 2v2 groups are linked. The start time is recorded once, and Room 1 goes to both sides at the same time.
-* Seven original puzzles, from Easy to Expert: a number lock, a riddle, a Caesar cipher, a word puzzle, a logic deduction, a multi-step numeric cipher and a multi-clue final keypad. Each puzzle's correctness and uniqueness is checked by the tests.
+* A pool of 21 original puzzles, three for each room, from Easy to Expert: number locks, riddles, ciphers (Caesar, Atbash, shift), word puzzles, logic deductions, multi-step codes (binary, phone keypad) and multi-clue finales. Each match draws one puzzle per room at random, both sides get the identical set, and a player's next match avoids the puzzles from their previous one. Each puzzle's answer and uniqueness is checked by the tests.
 * Answer checking ignores case, spacing, punctuation, accents and a leading article, and accepts several answers per room. It uses **no fuzzy matching**.
 * Hints: each side has **3 paid hints per game**, and hints within a room are progressive (1 → 2 → 3). Each paid hint gives the opponent a **free hint for the room they are in**. Free hints are tracked separately.
 * Real-time opponent alerts ("Your opponent just reached Room 4 🔓"). They reveal progress and nothing else.
@@ -145,10 +145,11 @@ How this works:
 
 ## Adding or replacing puzzles
 
-All puzzle content is in **`puzzles/puzzles.json`**. The Python code contains none.
+All puzzle content is in **`puzzles/puzzles.json`**. The Python code contains none. The file is a **pool**: list as many puzzles per room as you like, and each new match draws one per room at random.
 
 ```json
 {
+  "id": "padlock-triangle",
   "room": 1,
   "title": "The Rusty Padlock",
   "difficulty": "Easy",
@@ -164,15 +165,17 @@ All puzzle content is in **`puzzles/puzzles.json`**. The Python code contains no
 
 Rules, which are checked at startup by `puzzle_manager.py` and by `python bot.py --init-db`:
 
-* There must be exactly **7** puzzles with rooms numbered **1 to 7**.
+* Every room from **1 to 7** needs **at least one** puzzle. Add more puzzles with the same `room` number to give that room more variety.
+* `id` is optional but recommended: a short unique name such as `"padlock-triangle"`. Without one, a puzzle gets `room<N>-<position>`, which changes if you reorder the file.
+* Keep each room's options at a similar difficulty, so every match gets a fair progression.
 * Each puzzle needs exactly **3 hints**, ordered from least to most revealing.
 * `accepted_answers` must be a non-empty list. Matching ignores case, extra spaces, punctuation, accents and a leading *a/an/the*, but the letters and digits must otherwise match exactly. List every legitimate variant, for example `["iron", "iron chest"]`.
 * `question` and `hints` use **Telegram HTML**. Allowed tags are `<b> <i> <u> <s> <code> <pre>`. Write a literal `<`, `>` or `&` as `&lt;`, `&gt;` or `&amp;`. If the HTML is broken, the bot falls back to plain text rather than withholding the puzzle.
 * `image` is a file name inside `assets/puzzle_images/`, for example `"room4.png"`. The image is sent as a photo with `image_caption` right after the room's text. Paths outside that folder are rejected.
 
-**Changes only affect new matches.** When a match is created, the whole puzzle set is copied into its database row. Matches already in progress keep the version they started with, and both sides of a match always see identical content. The bot notices when the file changes, so a restart isn't needed. If an edited file is invalid, the bot logs an error and keeps using the last valid version.
+**Changes only affect new matches.** When a match is created, its seven drawn puzzles are copied into its database row. Matches already in progress keep the version they started with, and both sides of a match always see identical content. The bot notices when the file changes, so a restart isn't needed. If an edited file is invalid, the bot logs an error and keeps using the last valid version.
 
-After editing, run `python bot.py --init-db` and `pytest tests/test_puzzles.py`. The puzzle tests check the *sample* puzzles' logic, so update or remove those specific checks if you replace the puzzles.
+After editing, run `python bot.py --init-db` and `pytest tests/test_puzzles.py`. The puzzle tests check every *sample* puzzle's logic by `id`, so update or remove those specific checks if you replace the puzzles. The general checks (three hints, distinct answers, difficulty order) apply to any puzzles.
 
 ---
 

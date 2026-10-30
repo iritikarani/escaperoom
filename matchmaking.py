@@ -30,7 +30,7 @@ from config import TEAM_SIZE, Settings
 from database import Database
 from game_engine import Outcome, enqueue_room
 from notifications import enqueue_text
-from puzzle_manager import PuzzleSet
+from puzzle_manager import PuzzleLibrary, PuzzleSet
 from state import (
     GROUP_CHAT_TYPES,
     Button,
@@ -77,7 +77,7 @@ class CreatedMatch:
 
 
 class Matchmaking:
-    def __init__(self, db: Database, puzzle_source: Callable[[], PuzzleSet], settings: Settings,
+    def __init__(self, db: Database, puzzle_source: Callable[[], PuzzleLibrary], settings: Settings,
                  clock: Clock = time.time, puzzles: PuzzleCache | None = None):
         self.db = db
         self.puzzle_source = puzzle_source
@@ -113,7 +113,7 @@ class Matchmaking:
         if mode not in TEAM_SIZE:
             raise GameError("Unknown game mode.")
         now = self.clock()
-        puzzles = self.puzzle_source()
+        library = self.puzzle_source()
         with self.db.transaction() as conn:
             user = get_user(conn, user_id)
             if user is None or user["private_chat_id"] is None:
@@ -124,6 +124,9 @@ class Matchmaking:
                     f"🎮 You're already in match <code>{existing['match_id']}</code>. "
                     "Finish it or use /quit before creating a new one."
                 )
+            # One random puzzle per room; both sides share this exact set. Skip
+            # the creator's previous puzzles where the pool has alternatives.
+            puzzles = library.draw(avoid=self._recent_puzzle_ids(conn, user_id))
             match_id = self._unique(conn, "SELECT 1 FROM matches WHERE match_id = ?", MATCH_ID_LENGTH)
             conn.execute(
                 """
@@ -149,6 +152,19 @@ class Matchmaking:
             )
         log.info("Match %s (%s) created by %s", match_id, mode, user_id)
         return CreatedMatch(match_id, mode, code_a, code_b)
+
+    def _recent_puzzle_ids(self, conn: sqlite3.Connection, user_id: int) -> set[str]:
+        row = conn.execute(
+            """
+            SELECT m.puzzle_snapshot FROM team_members tm JOIN matches m ON m.match_id = tm.match_id
+            WHERE tm.user_id = ? AND m.started_at IS NOT NULL
+            ORDER BY m.started_at DESC LIMIT 1
+            """,
+            (user_id,),
+        ).fetchone()
+        if row is None:
+            return set()
+        return {p.id for p in PuzzleSet.from_json(row["puzzle_snapshot"])}
 
     def _unique(self, conn: sqlite3.Connection, sql: str, length: int) -> str:
         for _ in range(20):

@@ -233,3 +233,31 @@ def test_room_messages_carry_enter_the_room_buttons(site):
     welcome = [p for e, p in fake.calls if e == "sendMessage" and "Welcome" in p.get("text", "")][0]
     menu = welcome["reply_markup"] if isinstance(welcome["reply_markup"], dict) else json.loads(welcome["reply_markup"])
     assert menu["inline_keyboard"][0][0]["web_app"]["url"] == "https://example.test/app"
+
+
+def test_chat_gets_short_room_ready_message_not_the_puzzle(site):
+    fake = site
+    start_1v1(fake)
+    room = [t for t in fake.texts(1) if "ROOM 1 / 7" in t][0]
+    assert "waiting inside" in room and "Enter the room" in room
+    assert "triangle" not in room  # the puzzle text only appears in the room screen
+    assert "triangle" in api("state", 1)[1]["state"]["puzzle"]["question"]
+    api("answer", 1, guess=ANSWERS[1])
+    nxt = [t for t in fake.texts(1) if "ROOM 2 / 7" in t][0]
+    assert "ROOM 2 UNLOCKED" in nxt and "waiting inside" in nxt
+
+
+def test_typed_answers_in_chat_still_work_with_the_room_screen(site):
+    fake = site
+    start_1v1(fake)
+    hook(message(1, "Alice", ANSWERS[1]))
+    assert api("state", 1)[1]["state"]["you"]["room"] == 2
+
+
+def test_groups_without_a_room_link_still_get_the_full_puzzle(site):
+    settings = webhook_app._app.bot_data["services"].settings
+    object.__setattr__(settings, "miniapp_link", "")  # this test's app only
+    fake = site
+    start_2v2(fake)
+    group_room = [t for t in fake.texts(-101) if "ROOM 1 / 7" in t][0]
+    assert "Your puzzle:" in group_room and "waiting inside" not in group_room

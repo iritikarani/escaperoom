@@ -57,22 +57,29 @@ def enqueue_room(
     header: str | None = None,
     settings: Settings | None = None,
 ) -> None:
-    """Queue delivery of ``room`` to ``team`` exactly once (idempotent)."""
+    """Queue delivery of ``room`` to ``team`` exactly once (idempotent).
+
+    When the chat can open the room screen (Mini App), the chat only gets a
+    short "room is ready" message with the button, and the puzzle itself is
+    revealed inside the room. Otherwise the full puzzle is sent as text.
+    """
     if room > TOTAL_ROOMS:
         return
     puzzle = puzzles.for_match(match).get(room)
     key = f"room:{team['team_id']}:{room}"
+    buttons = room_buttons(settings, team["chat_id"]) if settings else None
     enqueue_text(
         conn,
         chat_id=team["chat_id"],
-        text=msg.room_message(puzzle, match["mode"], header),
+        text=(msg.room_ready_message(puzzle, header) if buttons
+              else msg.room_message(puzzle, match["mode"], header)),
         dedupe_key=key,
         now=now,
         match_id=match["match_id"],
         kind="room",
-        buttons=room_buttons(settings, team["chat_id"]) if settings else None,
+        buttons=buttons,
     )
-    if puzzle.image:
+    if puzzle.image and not buttons:  # the room screen shows the image itself
         enqueue_photo(
             conn,
             chat_id=team["chat_id"],

@@ -52,9 +52,19 @@ def test_malformed_init_data_rejected(bad):
     assert verify_init_data(bad, TOKEN) is None
 
 
-def test_third_party_signature_field_ignored():
-    data = signed(7)
-    assert verify_init_data(data + "&signature=xyz", TOKEN)["id"] == 7
+def test_current_clients_with_signature_field_accepted():
+    # Current Telegram apps send `signature` and include it in the hash.
+    data = signed(7, extra={"signature": "Gx8QzS0bD1x-sAmPlE_sig"})
+    assert verify_init_data(data, TOKEN)["id"] == 7
+
+
+def test_older_clients_without_signature_accepted():
+    assert verify_init_data(signed(7), TOKEN)["id"] == 7
+
+
+def test_signature_field_cannot_be_tampered():
+    data = signed(7, extra={"signature": "original"})
+    assert verify_init_data(data.replace("original", "changed"), TOKEN) is None
 
 
 def test_scene_mapping():

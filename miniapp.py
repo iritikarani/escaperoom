@@ -66,11 +66,20 @@ def verify_init_data(init_data: str, bot_token: str, now: float | None = None,
     except ValueError:
         return None
     received_hash = fields.pop("hash", "")
-    fields.pop("signature", None)  # third-party signature; not part of the bot-token check
-    check_string = "\n".join(f"{k}={v}" for k, v in sorted(fields.items()))
+    if not received_hash:
+        return None
     secret = hmac.new(b"WebAppData", bot_token.encode(), hashlib.sha256).digest()
-    expected = hmac.new(secret, check_string.encode(), hashlib.sha256).hexdigest()
-    if not received_hash or not hmac.compare_digest(expected, received_hash):
+
+    def matches(items: dict) -> bool:
+        check_string = "\n".join(f"{k}={v}" for k, v in sorted(items.items()))
+        expected = hmac.new(secret, check_string.encode(), hashlib.sha256).hexdigest()
+        return hmac.compare_digest(expected, received_hash)
+
+    # Telegram's hash covers every field except `hash` itself - including the
+    # newer `signature` field. Older clients send no `signature`; checking a
+    # variant without it too keeps them working. Both need the bot token.
+    without_signature = {k: v for k, v in fields.items() if k != "signature"}
+    if not (matches(fields) or ("signature" in fields and matches(without_signature))):
         return None
     try:
         auth_date = int(fields.get("auth_date", "0"))

@@ -351,7 +351,7 @@ class Matchmaking:
                 dedupe_key=f"start:{match_id}:{team['team_id']}",
                 now=now, match_id=match_id, kind="start",
             )
-            enqueue_room(conn, self.puzzles, match, team, 1, now)
+            enqueue_room(conn, self.puzzles, match, team, 1, now, settings=self.settings)
         log.info("Match %s started", match_id)
 
     # -- lobby housekeeping -----------------------------------------------------

@@ -91,6 +91,27 @@ To run the tests: `pytest`
 
 ---
 
+## The room screen (Telegram Mini App)
+
+When the bot runs in webhook mode (for example on PythonAnywhere), players can also play in a visual room instead of the chat. Tapping **🚪 Enter the room** opens a full-screen page inside Telegram:
+
+* each room is drawn with its own colour and a central object that matches the puzzle (padlock, clock, chest, old phone, blinking lamps and so on),
+* tap the object, or **Inspect the puzzle**, to read the puzzle, type an answer and use hints,
+* a race track shows your progress and your opponent's, plus a live timer,
+* when you solve a room, the door swings open and the next room loads.
+
+It's the same game: answers and hints from the room screen go through the same rules as chat commands, so free hints, opponent alerts and winner detection all still apply. Players can switch between the room screen and the chat at any time.
+
+**Where the button appears**
+
+* In the bot's private chat: on every room message, in the main menu, under `/status`, and as the **Play** button next to the message box.
+* In 2v2 team groups, Telegram only allows Mini App buttons through a direct link. To get one, send `/newapp` to @BotFather, choose your bot, and set the URL to `https://<username>.pythonanywhere.com/app` and a short name such as `room`. Then run `.venv/bin/python pythonanywhere_setup.py --miniapp-link https://t.me/<YourBot>/room` and press **Reload**. Without the link, team players can still open the room from the **Play** button in their private chat with the bot.
+* In 2v2, every guess made in the room screen is also posted to the team group, so teammates still see each other's guesses.
+
+**Security:** every request from the room screen carries Telegram's signed login data (`initData`). The server checks the signature with the bot token and rejects anything older than 24 hours, so nobody can pretend to be another player or read the other side's puzzles. The screen only shows the opponent's room number.
+
+**Limits:** the room screen checks for updates every 4 seconds, so opponent progress shows there with a short delay. Chat notifications still arrive instantly. Polling mode (`python bot.py`) has no web server, so the room screen needs webhook hosting.
+
 ## Group permissions and privacy mode
 
 **Keep privacy mode ON and don't make the bot an admin.** The bot only needs to **read commands** and **send messages and photos** in the team groups.
@@ -195,7 +216,9 @@ escape_room_bot/
 ├── notifications.py     Transactional outbox + reliable Telegram delivery
 ├── messages.py          All user-facing text (HTML templates)
 ├── backup.py            Online SQLite backup
-├── webhook_app.py       WSGI entry point for webhook hosting (PythonAnywhere)
+├── webhook_app.py       WSGI entry point for webhook hosting (PythonAnywhere) + Mini App routes
+├── miniapp.py           Mini App backend: Telegram login check and room API
+├── miniapp/index.html   The visual room screen (drawn with SVG, no images)
 ├── pythonanywhere_setup.py  One-command PythonAnywhere setup
 ├── puzzles/puzzles.json
 ├── assets/puzzle_images/

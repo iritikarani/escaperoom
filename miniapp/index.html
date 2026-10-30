@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Escape Room</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root {
+    --bg: #0f0c17;
+    --panel: #1b1626;
+    --panel-2: #241d33;
+    --line: #342a48;
+    --text: #f1ecfa;
+    --muted: #a99cc2;
+    --accent: hsl(var(--hue, 200) 80% 62%);
+    --accent-soft: hsl(var(--hue, 200) 70% 50% / .18);
+    --good: #4ade80;
+    --bad: #f87171;
+    --gold: #fbbf24;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  body { min-height: 100vh; padding: 12px 14px 24px; max-width: 560px; margin: 0 auto; }
+  button { font: inherit; color: inherit; border: 0; cursor: pointer; }
+  .hidden { display: none !important; }
+
+  /* top bar */
+  .top { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .room-title { font-weight: 800; letter-spacing: .08em; font-size: 18px; }
+  .chip { font-size: 12px; padding: 3px 9px; border-radius: 999px; background: var(--accent-soft);
+    color: var(--accent); font-weight: 700; }
+  .spacer { flex: 1; }
+  .pill { font-size: 13px; padding: 4px 10px; border-radius: 999px; background: var(--panel-2); color: var(--muted); }
+
+  /* race track */
+  .race { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; margin-bottom: 12px; }
+  .lane { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .lane + .lane { margin-top: 6px; }
+  .lane .who { width: 74px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dots { display: flex; gap: 6px; flex: 1; }
+  .dot { flex: 1; height: 8px; border-radius: 4px; background: var(--line); transition: background .4s; }
+  .dot.done { background: var(--accent); }
+  .lane.them .dot.done { background: #8b7fa8; }
+  .dot.now { background: linear-gradient(90deg, var(--accent), var(--line)); animation: pulse 1.6s infinite; }
+  .lane.them .dot.now { background: linear-gradient(90deg, #8b7fa8, var(--line)); }
+  @keyframes pulse { 50% { opacity: .5; } }
+
+  /* scene */
+  .scene { position: relative; border-radius: 18px; overflow: hidden; border: 1px solid var(--line);
+    background: #000; aspect-ratio: 360 / 250; user-select: none; }
+  .scene svg { width: 100%; height: 100%; display: block; }
+  .object { cursor: pointer; transform-origin: 180px 150px; animation: float 3.2s ease-in-out infinite; }
+  .object:active { transform: scale(.96); }
+  .glow { animation: glow 2.4s ease-in-out infinite; }
+  @keyframes float { 50% { transform: translateY(-4px); } }
+  @keyframes glow { 50% { opacity: .35; } }
+  .flicker { animation: flick 4s infinite; }
+  @keyframes flick { 0%, 100% { opacity: .9 } 45% { opacity: .75 } 47% { opacity: .95 } 49% { opacity: .6 } 52% { opacity: .9 } }
+  .door-leaf { transform-origin: 262px 0; transform-box: view-box; transition: transform 1.1s cubic-bezier(.6,.05,.3,1); }
+  .scene.open .door-leaf { transform: scaleX(.14) skewY(8deg); }
+  .door-light { opacity: 0; transition: opacity 1.1s; }
+  .scene.open .door-light { opacity: 1; }
+  .tap-hint { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); font-size: 12px;
+    color: var(--muted); background: rgba(0,0,0,.45); padding: 4px 10px; border-radius: 999px; pointer-events: none; }
+
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+  .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 10px; text-align: center; }
+  .stat b { display: block; font-size: 20px; font-variant-numeric: tabular-nums; }
+  .stat span { font-size: 12px; color: var(--muted); }
+  .tip { margin-top: 12px; font-size: 13px; color: var(--muted); text-align: center; }
+  .hint-note { font-size: 12px; color: var(--muted); text-align: center; margin-top: 6px; }
+  .inspect { width: 100%; margin-top: 12px; padding: 13px; border-radius: 14px; background: var(--accent);
+    color: #0b0912; font-weight: 800; font-size: 16px; }
+
+  /* puzzle sheet */
+  .sheet-backdrop { position: fixed; inset: 0; background: rgba(5,3,10,.6); opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 10; }
+  .sheet-backdrop.show { opacity: 1; pointer-events: auto; }
+  .sheet { position: fixed; left: 0; right: 0; bottom: 0; max-width: 560px; margin: 0 auto; max-height: 88vh; overflow-y: auto;
+    background: var(--panel); border-top: 1px solid var(--line); border-radius: 22px 22px 0 0; padding: 10px 16px 20px;
+    transform: translateY(105%); transition: transform .3s cubic-bezier(.2,.8,.2,1); z-index: 11; }
+  .sheet.show { transform: none; }
+  .grab { width: 44px; height: 5px; border-radius: 3px; background: var(--line); margin: 0 auto 12px; }
+  .sheet h2 { margin: 0 0 2px; font-size: 19px; }
+  .sheet .sub { color: var(--muted); font-size: 13px; margin-bottom: 12px; }
+  .question { white-space: pre-line; background: var(--panel-2); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
+  .question code { white-space: pre; font-size: 16px; letter-spacing: .1em; }
+  .question img { max-width: 100%; border-radius: 10px; margin-top: 8px; }
+  .hints { margin: 12px 0 0; padding: 0; list-style: none; }
+  .hints li { background: hsl(45 90% 55% / .1); border: 1px solid hsl(45 90% 55% / .3); border-radius: 12px; padding: 9px 12px; margin-top: 8px; font-size: 14px; }
+  .hints li b { color: var(--gold); }
+  .answer-row { display: flex; gap: 8px; margin-top: 14px; }
+  .answer-row input { flex: 1; min-width: 0; padding: 13px 14px; border-radius: 12px; border: 1px solid var(--line);
+    background: #0f0c17; color: var(--text); font: inherit; font-size: 16px; outline: none; }
+  .answer-row input:focus { border-color: var(--accent); }
+  .btn { padding: 12px 16px; border-radius: 12px; font-weight: 800; background: var(--accent); color: #0b0912; }
+  .btn.ghost { background: var(--panel-2); color: var(--text); font-weight: 600; width: 100%; margin-top: 10px; }
+  .btn:disabled { opacity: .5; }
+  .feedback { min-height: 22px; margin-top: 8px; font-size: 14px; }
+  .feedback.bad { color: var(--bad); }
+  .feedback.good { color: var(--good); }
+  .shake { animation: shake .4s; }
+  @keyframes shake { 20%, 60% { transform: translateX(-7px) } 40%, 80% { transform: translateX(7px) } }
+
+  /* full-screen states */
+  .screen { text-align: center; padding: 48px 12px; }
+  .screen .big { font-size: 64px; }
+  .screen h1 { margin: 10px 0 6px; font-size: 24px; }
+  .screen p { color: var(--muted); margin: 6px 0; }
+  .lobby-list { text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; margin: 18px auto 0; max-width: 360px; }
+  .lobby-list div { padding: 4px 0; }
+
+  .toast { position: fixed; left: 50%; top: 14px; transform: translate(-50%, -150%); background: var(--panel-2);
+    border: 1px solid var(--line); padding: 10px 16px; border-radius: 999px; font-size: 14px; z-index: 20; transition: transform .35s; white-space: nowrap; }
+  .toast.show { transform: translate(-50%, 0); }
+  .confetti { position: fixed; top: -12px; width: 9px; height: 14px; z-index: 30; animation: fall linear forwards; }
+  @keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }
+</style>
+</head>
+<body>
+
+<div id="loading" class="screen"><div class="big">🗝️</div><p>Opening the room…</p></div>
+
+<div id="message" class="screen hidden"><div class="big" id="msgIcon"></div><h1 id="msgTitle"></h1><p id="msgText"></p><div id="msgExtra"></div></div>
+
+<div id="game" class="hidden">
+  <div class="top">
+    <span class="room-title" id="roomTitle">ROOM 1 / 7</span>
+    <span class="chip" id="difficulty"></span>
+    <span class="spacer"></span>
+    <span class="pill" id="hintPill">💡 3</span>
+  </div>
+
+  <div class="race">
+    <div class="lane you"><span class="who" id="youName">You</span><div class="dots" id="youDots"></div></div>
+    <div class="lane them"><span class="who" id="themName">Opponent</span><div class="dots" id="themDots"></div></div>
+  </div>
+
+  <div class="scene" id="scene"></div>
+  <button class="inspect" id="inspectBtn">🔍 Inspect the puzzle</button>
+  <div class="stats">
+    <div class="stat"><b id="timer">0:00</b><span>Time</span></div>
+    <div class="stat"><b id="statHints">3</b><span>Paid hints left</span></div>
+    <div class="stat"><b id="statFree">0</b><span>Free hints</span></div>
+  </div>
+  <div class="tip" id="tip">Solve the puzzle to unlock the door. Your opponent only sees which room you reach.</div>
+</div>
+
+<div class="sheet-backdrop" id="backdrop"></div>
+<div class="sheet" id="sheet">
+  <div class="grab"></div>
+  <h2 id="pTitle"></h2>
+  <div class="sub" id="pSub"></div>
+  <div class="question" id="pQuestion"></div>
+  <ul class="hints" id="pHints"></ul>
+  <form class="answer-row" id="answerForm" autocomplete="off">
+    <input id="answerInput" placeholder="Your answer" enterkeyhint="send" maxlength="200">
+    <button class="btn" id="tryBtn" type="submit">Try</button>
+  </form>
+  <div class="feedback" id="feedback"></div>
+  <button class="btn ghost" id="hintBtn">💡 Use a hint</button>
+  <div class="hint-note" id="hintNote">Using a paid hint gives your opponent a free one.</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  const tg = window.Telegram && window.Telegram.WebApp;
+  const initData = tg ? tg.initData : "";
+  const $ = (id) => document.getElementById(id);
+  const HUES = [200, 32, 165, 275, 350, 120, 45];
+  let state = null, busy = false, lastOppRoom = null, lastRoom = null, pollTimer = null, timerBase = null;
+  setInterval(() => {
+    if (!timerBase) return;
+    const s = timerBase.elapsed + Math.floor((Date.now() - timerBase.at) / 1000);
+    $("timer").textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  }, 1000);
+
+  if (tg) {
+    tg.ready(); tg.expand();
+    try { tg.setHeaderColor("#0f0c17"); tg.setBackgroundColor("#0f0c17"); } catch (e) {}
+  }
+  const haptic = (type) => { try { tg.HapticFeedback.notificationOccurred(type); } catch (e) {} };
+
+  async function api(action, extra) {
+    const res = await fetch("/api/" + action, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(Object.assign({ initData }, extra || {})),
+    });
+    if (res.status === 401) throw new Error("unauthorized");
+    if (!res.ok) throw new Error("http " + res.status);
+    return res.json();
+  }
+
+  function show(id) {
+    for (const el of ["loading", "message", "game"]) $(el).classList.toggle("hidden", el !== id);
+  }
+  function message(icon, title, text, extraNode) {
+    $("msgIcon").textContent = icon; $("msgTitle").textContent = title; $("msgText").textContent = text;
+    const extra = $("msgExtra"); extra.replaceChildren(); if (extraNode) extra.appendChild(extraNode);
+    closeSheet(); show("message");
+  }
+  function toast(text) {
+    const t = $("toast"); t.textContent = text; t.classList.add("show");
+    clearTimeout(toast.timer); toast.timer = setTimeout(() => t.classList.remove("show"), 2600);
+  }
+  function confetti() {
+    const colors = ["#fbbf24", "#4ade80", "#60a5fa", "#f472b6", "#a78bfa"];
+    for (let i = 0; i < 70; i++) {
+      const c = document.createElement("div"); c.className = "confetti";
+      c.style.left = Math.random() * 100 + "vw"; c.style.background = colors[i % colors.length];
+      c.style.animationDuration = 1.8 + Math.random() * 1.6 + "s"; c.style.animationDelay = Math.random() * .5 + "s";
+      document.body.appendChild(c); setTimeout(() => c.remove(), 4200);
+    }
+  }
+  const fmtTime = (s) => { s = Math.max(0, s | 0); const m = Math.floor(s / 60); return m ? `${m}m ${s % 60}s` : `${s}s`; };
+
+  /* ---------- room art (all drawn with SVG, no images) ---------- */
+  const OBJECTS = {
+    lock: `<rect x="150" y="128" width="60" height="50" rx="8" fill="#c9a227"/><path d="M162 128v-14a18 18 0 0 1 36 0v14" fill="none" stroke="#9c9c9c" stroke-width="8"/>
+           <circle cx="180" cy="148" r="6" fill="#3b2f0a"/><rect x="177" y="150" width="6" height="14" rx="2" fill="#3b2f0a"/>`,
+    keypad: `<rect x="148" y="100" width="64" height="86" rx="8" fill="#2d3748" stroke="#94a3b8" stroke-width="2"/><rect x="156" y="108" width="48" height="14" rx="3" fill="#22c55e" opacity=".8"/>
+           ${[0,1,2].map(r=>[0,1,2].map(c=>`<rect x="${158+c*16}" y="${128+r*16}" width="12" height="12" rx="2" fill="#cbd5e1"/>`).join("")).join("")}`,
+    clock: `<circle cx="180" cy="140" r="38" fill="#f5e6c8" stroke="#7c5a2e" stroke-width="7"/><line x1="180" y1="140" x2="180" y2="116" stroke="#222" stroke-width="4" stroke-linecap="round"/>
+           <line x1="180" y1="140" x2="198" y2="148" stroke="#222" stroke-width="3" stroke-linecap="round"/><circle cx="180" cy="140" r="3" fill="#222"/>`,
+    book: `<rect x="146" y="118" width="68" height="56" rx="4" fill="#7f1d1d"/><rect x="152" y="122" width="56" height="48" fill="#fef3c7"/><line x1="180" y1="122" x2="180" y2="170" stroke="#d6c38f" stroke-width="2"/>
+           <line x1="158" y1="134" x2="174" y2="134" stroke="#a8956a"/><line x1="158" y1="142" x2="174" y2="142" stroke="#a8956a"/><line x1="186" y1="134" x2="202" y2="134" stroke="#a8956a"/>`,
+    ledger: `<rect x="144" y="120" width="72" height="54" rx="3" fill="#3f2d1a"/><rect x="149" y="124" width="62" height="46" fill="#efe3c3"/>
+           <text x="180" y="152" text-anchor="middle" font-size="11" font-family="monospace" fill="#5b4321">25·3·29·41</text>`,
+    window: `<rect x="140" y="92" width="80" height="80" rx="4" fill="#1e3a5f" stroke="#64748b" stroke-width="6"/><line x1="180" y1="92" x2="180" y2="172" stroke="#64748b" stroke-width="4"/>
+           <line x1="140" y1="132" x2="220" y2="132" stroke="#64748b" stroke-width="4"/>${[0,1,2,3,4,5,6].map(i=>`<line x1="${150+i*10}" y1="${100+(i%3)*12}" x2="${146+i*10}" y2="${112+(i%3)*12}" stroke="#93c5fd" stroke-width="2"/>`).join("")}`,
+    scroll: `<rect x="146" y="118" width="68" height="52" fill="#f3e2b3"/><rect x="140" y="112" width="80" height="10" rx="5" fill="#b08947"/><rect x="140" y="166" width="80" height="10" rx="5" fill="#b08947"/>
+           ${[0,1,2].map(i=>`<line x1="154" y1="${132+i*12}" x2="${206-i*10}" y2="${132+i*12}" stroke="#8a6a2f" stroke-width="3" stroke-dasharray="6 4"/>`).join("")}`,
+    sign: `<rect x="140" y="112" width="80" height="44" rx="4" fill="#78350f" stroke="#451a03" stroke-width="3"/><text x="180" y="140" text-anchor="middle" font-size="15" font-weight="bold" fill="#fde68a">_ _ _ _</text>
+           <rect x="176" y="156" width="8" height="30" fill="#451a03"/>`,
+    chest: `<rect x="142" y="134" width="76" height="46" rx="4" fill="#7c4a1e"/><path d="M142 134a38 20 0 0 1 76 0z" fill="#9a5b26"/><rect x="142" y="132" width="76" height="6" fill="#c9a227"/>
+           <rect x="174" y="140" width="12" height="14" rx="2" fill="#c9a227"/>`,
+    hooks: `<rect x="132" y="108" width="96" height="10" rx="3" fill="#5b3a1f"/>${[0,1,2,3].map(i=>{const x=146+i*22, col=["#b5651d","#c0c0c0","#c9a227","#d4a017"][i];
+           return `<path d="M${x} 118v8a5 5 0 0 0 10 0" fill="none" stroke="#999" stroke-width="2"/><circle cx="${x+10}" cy="140" r="6" fill="none" stroke="${col}" stroke-width="3"/><rect x="${x+8}" y="146" width="4" height="22" fill="${col}"/>`;}).join("")}`,
+    phone: `<rect x="160" y="96" width="40" height="86" rx="8" fill="#1f2937" stroke="#9ca3af" stroke-width="2"/><rect x="166" y="104" width="28" height="22" rx="2" fill="#86efac" opacity=".85"/>
+           ${[0,1,2,3].map(r=>[0,1,2].map(c=>`<circle cx="${171+c*9}" cy="${136+r*10}" r="3" fill="#d1d5db"/>`).join("")).join("")}`,
+    lamps: `${[0,1,2,3,4].map(i=>{const on=[0,1,1,0,1][i]; return `<circle cx="${140+i*20}" cy="132" r="8" fill="${on?"#fde047":"#3f3f46"}" ${on?'class="glow"':""}/><rect x="${137+i*20}" y="140" width="6" height="10" fill="#52525b"/>`;}).join("")}
+           <rect x="128" y="150" width="104" height="8" rx="3" fill="#3f3f46"/>`,
+    letters: `${["A","?","R","K","?","M","Y"].map((l,i)=>`<text x="${140+(i*37)%84}" y="${112+(i*23)%64}" font-size="20" font-weight="bold" fill="#fde68a" transform="rotate(${(i*29)%40-20} ${140+(i*37)%84} ${112+(i*23)%64})">${l}</text>`).join("")}`,
+  };
+
+  function sceneSVG(room, scene) {
+    const hue = HUES[(room - 1) % HUES.length];
+    return `
+<svg viewBox="0 0 360 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Room ${room}">
+  <defs>
+    <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="hsl(${hue} 35% 16%)"/><stop offset="1" stop-color="hsl(${hue} 30% 9%)"/></linearGradient>
+    <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="hsl(${hue} 20% 12%)"/><stop offset="1" stop-color="#050308"/></linearGradient>
+    <radialGradient id="lampGlow"><stop offset="0" stop-color="hsl(45 100% 70% / .55)"/><stop offset="1" stop-color="hsl(45 100% 70% / 0)"/></radialGradient>
+    <radialGradient id="spot" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="hsl(${hue} 90% 65% / .5)"/><stop offset="1" stop-color="hsl(${hue} 90% 65% / 0)"/></radialGradient>
+  </defs>
+  <rect width="360" height="250" fill="url(#wall)"/>
+  ${[0,1,2,3,4,5].map(i=>`<line x1="0" y1="${30+i*28}" x2="360" y2="${30+i*28}" stroke="hsl(${hue} 30% 22% / .35)" stroke-width="1"/>`).join("")}
+  <path d="M0 196 L360 196 L360 250 L0 250 Z" fill="url(#floor)"/>
+  ${[0,1,2,3,4,5,6].map(i=>`<line x1="${i*60}" y1="196" x2="${i*80-60}" y2="250" stroke="hsl(${hue} 20% 18%)" stroke-width="1"/>`).join("")}
+  <g class="flicker"><circle cx="54" cy="60" r="46" fill="url(#lampGlow)"/><rect x="48" y="56" width="12" height="16" rx="2" fill="#fcd34d"/><rect x="44" y="72" width="20" height="5" rx="2" fill="#57534e"/></g>
+  <rect x="34" y="104" width="44" height="60" fill="hsl(${hue} 25% 20%)" stroke="hsl(${hue} 25% 30%)" stroke-width="2"/>
+  <text x="56" y="140" text-anchor="middle" font-size="22" font-weight="800" fill="hsl(${hue} 60% 70% / .7)">${room}</text>
+  <g class="door">
+    <rect x="262" y="70" width="76" height="126" fill="#050308"/>
+    <rect class="door-light" x="262" y="70" width="76" height="126" fill="hsl(${hue} 90% 75%)"/>
+    <g class="door-leaf"><rect x="262" y="70" width="76" height="126" rx="3" fill="#3b2a1a" stroke="#1c130b" stroke-width="3"/>
+      <rect x="270" y="80" width="60" height="46" rx="2" fill="none" stroke="#2a1d11" stroke-width="2"/><rect x="270" y="136" width="60" height="50" rx="2" fill="none" stroke="#2a1d11" stroke-width="2"/>
+      <circle cx="326" cy="134" r="4" fill="#c9a227"/><text x="300" y="112" text-anchor="middle" font-size="16">🔒</text></g>
+  </g>
+  <ellipse cx="180" cy="196" rx="70" ry="10" fill="#000" opacity=".5"/>
+  <circle cx="180" cy="145" r="70" fill="url(#spot)" class="glow"/>
+  <g class="object" id="sceneObject">${OBJECTS[scene] || OBJECTS.lock}</g>
+</svg>`;
+  }
+
+  /* ---------- rendering ---------- */
+  function dots(container, room, total) {
+    container.replaceChildren();
+    for (let i = 1; i <= total; i++) {
+      const d = document.createElement("div");
+      d.className = "dot" + (i < room ? " done" : i === room ? " now" : "");
+      container.appendChild(d);
+    }
+  }
+
+  function render(s) {
+    state = s;
+    if (s.status === "none") {
+      return message("🙈", "You're not in a match", "Go back to the chat and create or join a match first.");
+    }
+    if (s.status === "lobby") {
+      const list = document.createElement("div"); list.className = "lobby-list";
+      for (const side of s.lobby) {
+        const row = document.createElement("div");
+        row.textContent = `${side.label}: ${side.players.join(", ") || "-"} (${side.players.length}/${side.needed})`;
+        list.appendChild(row);
+      }
+      return message("⏳", "Waiting for players", `Match ${s.match_id} starts as soon as everyone has joined.`, list);
+    }
+    if (s.result) {
+      clearInterval(pollTimer);  // the match is over; nothing more will change
+      if (s.result.won) { confetti(); haptic("success"); }
+      const how = s.result.reason === "forfeit" ? (s.result.won ? "Your opponent forfeited." : "The match was forfeited.") : "";
+      return message(s.result.won ? "🏆" : "🏁", s.result.won ? "You escaped!" : "Your opponent escaped first",
+        `${how} Match time: ${fmtTime(s.elapsed)}. Paid hints left: ${s.you.paid_hints_left}.`.trim());
+    }
+    if (!s.puzzle) {
+      return message("🏁", "You escaped!", "Waiting for the final result…");
+    }
+
+    const p = s.puzzle;
+    document.documentElement.style.setProperty("--hue", HUES[(p.room - 1) % HUES.length]);
+    $("roomTitle").textContent = `ROOM ${p.room} / ${s.total_rooms}`;
+    $("difficulty").textContent = p.difficulty;
+    $("hintPill").textContent = `💡 ${s.you.paid_hints_left}`;
+    $("youName").textContent = s.mode === "2v2" ? "Your team" : "You";
+    $("themName").textContent = s.mode === "2v2" ? "Rivals" : "Opponent";
+    dots($("youDots"), s.you.room, s.total_rooms);
+    dots($("themDots"), s.opponent.room, s.total_rooms);
+
+    if (lastRoom !== p.room) {
+      $("scene").innerHTML = sceneSVG(p.room, p.scene) + `<div class="tap-hint">Tap the object to inspect it</div>`;
+      $("sceneObject").addEventListener("click", openSheet);
+      $("answerInput").value = ""; setFeedback("", "");
+      lastRoom = p.room;
+    }
+    $("pTitle").textContent = p.title;
+    $("pSub").textContent = `Room ${p.room} · ${p.difficulty}`;
+    $("pQuestion").innerHTML = p.question + (p.image ? `<img src="${p.image}" alt="">` : "");  // trusted puzzle content
+    const hints = $("pHints"); hints.replaceChildren();
+    p.hints.forEach((h, i) => { const li = document.createElement("li"); const b = document.createElement("b");
+      b.textContent = `Hint ${i + 1}: `; li.append(b, document.createTextNode(h)); hints.appendChild(li); });
+    const hintBtn = $("hintBtn");
+    const roomHintsLeft = p.hints_total - p.hints.length;
+    hintBtn.disabled = s.you.paid_hints_left === 0 || roomHintsLeft === 0;
+    hintBtn.textContent = roomHintsLeft === 0 ? "💡 No more hints for this room"
+      : s.you.paid_hints_left === 0 ? "💡 No paid hints left" : `💡 Use a hint (${s.you.paid_hints_left} left)`;
+    $("hintNote").classList.toggle("hidden", hintBtn.disabled);
+    $("statHints").textContent = s.you.paid_hints_left;
+    $("statFree").textContent = s.you.free_hints;
+    $("tip").textContent = s.mode === "2v2"
+      ? "Your teammate sees every guess you make here in your team group."
+      : "Solve the puzzle to unlock the door. Your opponent only sees which room you reach.";
+    timerBase = { elapsed: s.elapsed || 0, at: Date.now() };
+
+    if (lastOppRoom !== null && s.opponent.room > lastOppRoom) {
+      toast(s.opponent.room > s.total_rooms ? "⚠️ Your opponent escaped!" : `📣 Opponent reached Room ${s.opponent.room}`);
+    }
+    lastOppRoom = s.opponent.room;
+    show("game");
+  }
+
+  function setFeedback(text, kind) { const f = $("feedback"); f.textContent = text || ""; f.className = "feedback " + (kind || ""); }
+  function openSheet() { $("sheet").classList.add("show"); $("backdrop").classList.add("show"); }
+  function closeSheet() { $("sheet").classList.remove("show"); $("backdrop").classList.remove("show"); }
+  const plain = (html) => { const d = document.createElement("div"); d.innerHTML = html || ""; return d.textContent; };
+
+  async function refresh() {
+    if (busy) return;
+    try { const r = await api("state"); render(r.state); }
+    catch (e) {
+      if (e.message === "unauthorized") message("🔒", "Open this from Telegram", "This room only works inside Telegram, from the bot's “Enter the room” button.");
+    }
+  }
+
+  $("inspectBtn").addEventListener("click", openSheet);
+  $("backdrop").addEventListener("click", closeSheet);
+
+  $("answerForm").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const guess = $("answerInput").value.trim();
+    if (!guess || busy) return;
+    busy = true; $("tryBtn").disabled = true;
+    try {
+      const r = await api("answer", { guess });
+      if (r.correct) {
+        haptic("success"); setFeedback("🔓 Correct!", "good");
+        await new Promise((ok) => setTimeout(ok, 500));
+        closeSheet(); $("scene").classList.add("open");
+        await new Promise((ok) => setTimeout(ok, 1300));
+        $("scene").classList.remove("open");
+        if (r.state.puzzle) toast(`🔓 Room ${r.state.puzzle.room} unlocked!`);
+        lastRoom = null; render(r.state);
+      } else {
+        haptic("error"); setFeedback(plain(r.message) || "Not quite!", "bad");
+        const row = $("answerForm"); row.classList.remove("shake"); void row.offsetWidth; row.classList.add("shake");
+        render(r.state);
+      }
+    } catch (e) { setFeedback("Connection problem - try again.", "bad"); }
+    finally { busy = false; $("tryBtn").disabled = false; }
+  });
+
+  $("hintBtn").addEventListener("click", async () => {
+    if (busy) return;
+    const go = () => new Promise((ok) => tg && tg.showConfirm
+      ? tg.showConfirm("Use one of your paid hints? Your opponent will get a free hint.", ok) : ok(confirm("Use a paid hint?")));
+    if (!(await go())) return;
+    busy = true;
+    try {
+      const r = await api("hint");
+      if (!r.ok) setFeedback(plain(r.message), "bad"); else { haptic("success"); setFeedback("💡 Hint revealed below the puzzle.", "good"); }
+      render(r.state);
+    } catch (e) { setFeedback("Connection problem - try again.", "bad"); }
+    finally { busy = false; }
+  });
+
+  if (!initData) {
+    message("🔒", "Open this from Telegram", "This room only works inside Telegram, from the bot's “Enter the room” button.");
+  } else {
+    refresh();
+    pollTimer = setInterval(() => { if (!document.hidden) refresh(); }, 4000);
+  }
+})();
+</script>
+</body>
+</html>

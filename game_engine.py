@@ -17,9 +17,10 @@ import messages as msg
 from answer_validator import canonical, is_correct, validate_guess
 from config import ESCAPED_ROOM, PAID_HINTS_PER_SIDE, TOTAL_ROOMS, Settings
 from database import Database
-from notifications import enqueue_photo, enqueue_text
+from notifications import enqueue_photo, enqueue_text, room_buttons
 from state import (
     Button,
+    MINIAPP,
     Clock,
     GameError,
     PuzzleCache,
@@ -54,6 +55,7 @@ def enqueue_room(
     room: int,
     now: float,
     header: str | None = None,
+    settings: Settings | None = None,
 ) -> None:
     """Queue delivery of ``room`` to ``team`` exactly once (idempotent)."""
     if room > TOTAL_ROOMS:
@@ -68,6 +70,7 @@ def enqueue_room(
         now=now,
         match_id=match["match_id"],
         kind="room",
+        buttons=room_buttons(settings, team["chat_id"]) if settings else None,
     )
     if puzzle.image:
         enqueue_photo(
@@ -149,13 +152,22 @@ class GameEngine:
 
         puzzle = self.puzzles.for_match(match).get(room)
         correct = is_correct(guess, puzzle.accepted_answers)
-        conn.execute(
+        attempt_id = conn.execute(
             """
             INSERT INTO guess_attempts (match_id, team_id, room, user_id, guess_normalized, is_correct, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
             (match["match_id"], team["team_id"], room, ctx.user_id, canonical(guess)[:200], int(correct), now),
-        )
+        ).lastrowid
+        if ctx.via == MINIAPP and ctx.mode == "2v2":
+            # Teammates must see every guess, including ones typed in the Mini App.
+            enqueue_text(
+                conn,
+                chat_id=team["chat_id"],
+                text=msg.app_guess_echo(display_name(get_user(conn, ctx.user_id)), guess.strip(), correct),
+                dedupe_key=f"guess:{attempt_id}",
+                now=now, match_id=match["match_id"], kind="guess_echo",
+            )
         if not correct:
             return Outcome(msg.wrong_answer())
 
@@ -182,7 +194,7 @@ class GameEngine:
         if ctx.mode == "2v2":
             solver = display_name(get_user(conn, ctx.user_id))
         enqueue_room(conn, self.puzzles, match, team, room + 1, now,
-                     header=msg.unlock_header(room, solver))
+                     header=msg.unlock_header(room, solver), settings=self.settings)
         enqueue_text(
             conn,
             chat_id=ctx.opponent["chat_id"],
@@ -420,7 +432,8 @@ class GameEngine:
             active = conn.execute("SELECT * FROM matches WHERE status = 'active'").fetchall()
             for match in active:
                 for team in get_teams(conn, match["match_id"]):
-                    enqueue_room(conn, self.puzzles, match, team, team["current_room"], now)
+                    enqueue_room(conn, self.puzzles, match, team, team["current_room"], now,
+                                 settings=self.settings)
             pending = conn.execute("SELECT COUNT(*) FROM outbox WHERE status = 'pending'").fetchone()[0]
             lobbies = conn.execute("SELECT COUNT(*) FROM matches WHERE status = 'lobby'").fetchone()[0]
         summary = {"active_matches": len(active), "open_lobbies": lobbies, "pending_messages": pending}

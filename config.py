@@ -68,6 +68,9 @@ class Settings:
     webhook_listen: str = "0.0.0.0"
     webhook_port: int = 8443
     webhook_secret: str = ""
+    # Outbound HTTP proxy for Telegram API calls. PythonAnywhere's free plan
+    # only allows outbound traffic through http://proxy.server:3128.
+    telegram_proxy_url: str = ""
     log_level: str = "INFO"
 
 
@@ -95,5 +98,6 @@ def load_settings(require_token: bool = True) -> Settings:
         webhook_listen=os.getenv("WEBHOOK_LISTEN", "0.0.0.0").strip(),
         webhook_port=_int("PORT", _int("WEBHOOK_PORT", 8443)),
         webhook_secret=os.getenv("WEBHOOK_SECRET", "").strip(),
+        telegram_proxy_url=os.getenv("TELEGRAM_PROXY_URL", "").strip(),
         log_level=os.getenv("LOG_LEVEL", "INFO").strip().upper() or "INFO",
     )

@@ -371,13 +371,21 @@ async def background_loop(app: Application) -> None:
             log.exception("Background maintenance failed")
 
 
-async def on_startup(app: Application) -> None:
+async def prepare(app: Application, register_commands: bool = True) -> None:
+    """Recover state and deliver anything pending. Shared by every run mode."""
     svc: Services = app.bot_data["services"]
-    svc.notifier = Notifier(svc.db, app.bot, svc.settings.assets_dir,
-                            max_attempts=svc.settings.outbox_max_attempts)
+    if svc.notifier is None:
+        svc.notifier = Notifier(svc.db, app.bot, svc.settings.assets_dir,
+                                max_attempts=svc.settings.outbox_max_attempts)
     svc.matchmaking.expire_lobbies()
     svc.engine.recover()
     await svc.notifier.flush()
+    if register_commands:
+        await register_bot_commands(app)
+    log.info("Bot @%s is up", app.bot.username)
+
+
+async def register_bot_commands(app: Application) -> None:
     private = [
         BotCommand("start", "Main menu"), BotCommand("create", "Create a match"),
         BotCommand("join", "Join with a code"), BotCommand("answer", "Submit an answer"),
@@ -388,8 +396,24 @@ async def on_startup(app: Application) -> None:
     with contextlib.suppress(Exception):
         await app.bot.set_my_commands(private, scope=BotCommandScopeAllPrivateChats())
         await app.bot.set_my_commands(group, scope=BotCommandScopeAllGroupChats())
+
+
+async def on_startup(app: Application) -> None:
+    await prepare(app)
     app.bot_data["background"] = asyncio.create_task(background_loop(app))
-    log.info("Bot @%s is up", app.bot.username)
+
+
+async def run_maintenance(svc: Services, request=None) -> None:
+    """One-off upkeep for hosts without a long-running process: expire old
+    lobbies, prune old records and retry undelivered messages."""
+    app = build_application(svc, request=request)
+    await app.initialize()
+    try:
+        await prepare(app, register_commands=False)
+        svc.db.prune(time.time())
+        await svc.notifier.flush()
+    finally:
+        await app.shutdown()
 
 
 async def on_shutdown(app: Application) -> None:
@@ -411,6 +435,9 @@ def build_application(svc: Services, request=None) -> Application:
     )
     if request is not None:  # tests inject a fake Telegram HTTP layer
         builder = builder.request(request).get_updates_request(request)
+    elif svc.settings.telegram_proxy_url:
+        builder = builder.proxy(svc.settings.telegram_proxy_url).get_updates_proxy(
+            svc.settings.telegram_proxy_url)
     app = builder.build()
     app.bot_data["services"] = svc
     app.add_handler(TypeHandler(Update, preprocess), group=-1)
@@ -435,6 +462,9 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Competitive Escape Room Telegram bot")
     parser.add_argument("--init-db", action="store_true",
                         help="create/upgrade the database, validate puzzles.json and exit")
+    parser.add_argument("--maintenance", action="store_true",
+                        help="expire lobbies and retry pending messages once, then exit "
+                             "(for webhook hosts such as PythonAnywhere; run as a scheduled task)")
     args = parser.parse_args(argv)
 
     try:
@@ -455,6 +485,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.init_db:
         print(f"Database ready at {settings.database_path} (schema v{svc.db.schema_version()}); "
               f"puzzles OK ({settings.puzzles_path}).")
+        svc.db.close()
+        return 0
+
+    if args.maintenance:
+        asyncio.run(run_maintenance(svc))
         svc.db.close()
         return 0
 

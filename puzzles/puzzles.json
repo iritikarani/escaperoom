@@ -1,0 +1,118 @@
+{
+  "version": 1,
+  "title": "The Clockmaker's Vault",
+  "puzzles": [
+    {
+      "room": 1,
+      "title": "The Rusty Padlock",
+      "difficulty": "Easy",
+      "question": "A rusty padlock with three number wheels hangs on the first door. A note is tied to it:\n\n\"My first digit is the number of sides on a triangle.\nMy second digit is double my first.\nMy last digit is the sum of the other two.\"\n\nWhat is the 3-digit code?",
+      "image": null,
+      "image_caption": null,
+      "accepted_answers": ["369"],
+      "hints": [
+        "Work through the clues in order - each one gives you one digit.",
+        "A triangle has 3 sides, so the code starts with 3.",
+        "3, then 3 x 2 = 6, then 3 + 6 = 9."
+      ],
+      "solution": "369",
+      "explanation": "Triangle = 3 sides; double it = 6; 3 + 6 = 9."
+    },
+    {
+      "room": 2,
+      "title": "The Ticking Wall",
+      "difficulty": "Easy",
+      "question": "Above the second door, something speaks in a riddle:\n\n\"I hang on the wall all day and all night.\nI never take a single step, yet I keep on running.\nI have a face with no eyes, and hands that can hold nothing.\"\n\nWhat am I? (one word)",
+      "image": null,
+      "image_caption": null,
+      "accepted_answers": ["clock", "wall clock"],
+      "hints": [
+        "\"Running\" doesn't have to mean legs - think of something that keeps going.",
+        "Its face and hands are made of numbers and pointers.",
+        "It tells you the time."
+      ],
+      "solution": "A clock",
+      "explanation": "A wall clock hangs on the wall, 'runs' constantly, and has a face and hands."
+    },
+    {
+      "room": 3,
+      "title": "The Mysterious Cipher",
+      "difficulty": "Medium",
+      "question": "Scratched into the third door are two strange words:\n\n<b>KLGGHQ GRRU</b>\n\nBelow them, someone has carved a tiny reminder: <b>A → D</b>\n\nDecode the message. The two words are the password.",
+      "image": null,
+      "image_caption": null,
+      "accepted_answers": ["hidden door"],
+      "hints": [
+        "Every letter has been replaced by another letter the same distance along the alphabet.",
+        "A became D, so every letter was shifted 3 places forward. Shift each one 3 places back.",
+        "K → H, L → I, G → D ... the first word is HIDDEN."
+      ],
+      "solution": "HIDDEN DOOR",
+      "explanation": "A Caesar cipher with a shift of 3: K-L-G-G-H-Q → H-I-D-D-E-N, G-R-R-U → D-O-O-R."
+    },
+    {
+      "room": 4,
+      "title": "The Locksmith's Missing Word",
+      "difficulty": "Medium",
+      "question": "A locksmith's workbench is covered in labels with a word cut out of each one. The same single word fits every gap:\n\n• SKELETON ____\n• ____HOLE\n• ____BOARD\n• ____STONE\n• ____NOTE\n\nWhat is the missing word?",
+      "image": null,
+      "image_caption": null,
+      "accepted_answers": ["key"],
+      "hints": [
+        "It's a short word, and you're in a locksmith's workshop.",
+        "A pianist uses one of the ____BOARD words; an architect needs a ____STONE to hold an arch together.",
+        "It's what opens a lock: a ____HOLE is where you put it."
+      ],
+      "solution": "KEY",
+      "explanation": "Skeleton key, keyhole, keyboard, keystone, keynote."
+    },
+    {
+      "room": 5,
+      "title": "The Three Chests",
+      "difficulty": "Hard",
+      "question": "Three chests stand before you: one made of <b>OAK</b>, one of <b>IRON</b> and one of <b>GLASS</b> (frosted - you can't see inside). Exactly one chest holds the key to the next door.\n\nEach chest has an inscription, and <b>exactly one</b> of the three inscriptions is true:\n\n🪵 OAK: \"The key is in this chest.\"\n⚙️ IRON: \"The key is not in this chest.\"\n🔮 GLASS: \"The key is not in the oak chest.\"\n\nWhich chest holds the key?",
+      "image": null,
+      "image_caption": null,
+      "accepted_answers": ["iron", "iron chest"],
+      "hints": [
+        "Try each chest in turn: assume the key is there and count how many inscriptions would be true.",
+        "If the key were in the oak chest, both OAK's and IRON's inscriptions would be true - that's too many.",
+        "If the key were in the glass chest, IRON's and GLASS's inscriptions would both be true. Only one chest leaves exactly one true inscription."
+      ],
+      "solution": "The IRON chest",
+      "explanation": "Key in iron: OAK false, IRON false, GLASS true - exactly one true statement. The other two placements give two true statements."
+    },
+    {
+      "room": 6,
+      "title": "The Lantern-Maker's Ledger",
+      "difficulty": "Hard",
+      "question": "A dusty ledger lies open on the lantern-maker's desk. One line of numbers is circled:\n\n<b>25 · 3 · 29 · 41 · 11 · 37 · 29</b>\n\nIn the margin, the lantern-maker wrote:\n\"Each number was once a letter (A = 1, B = 2 ... Z = 26). I doubled every letter, then added one. To read my secret, undo what I did - in reverse.\"\n\nWhat is the secret word?",
+      "image": null,
+      "image_caption": null,
+      "accepted_answers": ["lantern"],
+      "hints": [
+        "Reverse the steps: first subtract 1, then halve.",
+        "25 → 24 → 12, which is the letter L. 3 → 2 → 1, which is A.",
+        "The numbers become 12 · 1 · 14 · 20 · 5 · 18 · 14. Look at the title of this room."
+      ],
+      "solution": "LANTERN",
+      "explanation": "(n - 1) / 2 gives 12, 1, 14, 20, 5, 18, 14 = L, A, N, T, E, R, N."
+    },
+    {
+      "room": 7,
+      "title": "The Clockmaker's Escape Hatch",
+      "difficulty": "Expert",
+      "question": "The final hatch is sealed by a 4-digit keypad. Five clues are hidden around the room:\n\n📜 On the desk: \"All four digits are different, and none of them is zero.\"\n🕯️ On the candle: \"The second digit is three times the first.\"\n🗺️ On the map: \"The third digit equals the number of rooms you have already escaped.\"\n🪞 On the mirror: \"The first and last digits add up to ten.\"\n🔢 On the keypad: \"The last digit is a perfect square.\"\n\nEnter the 4-digit code to escape!",
+      "image": null,
+      "image_caption": null,
+      "accepted_answers": ["1369"],
+      "hints": [
+        "You are in Room 7, so you have already escaped 6 rooms. That's the third digit.",
+        "If the second digit is three times the first, the first digit can only be 1, 2 or 3. One of those clashes with the third digit.",
+        "First digit 1 gives a last digit of 9 (a perfect square). First digit 3 gives a last digit of 7, which is not."
+      ],
+      "solution": "1369",
+      "explanation": "Third digit = 6. First digit is 1, 2 or 3 (second = 3x first); 2 gives 2-6-6-8 with a repeated 6. Last digit = 10 - first: 9 (square) for 1, 7 (not square) for 3. Code: 1-3-6-9."
+    }
+  ]
+}

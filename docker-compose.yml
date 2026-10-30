@@ -1,0 +1,12 @@
+services:
+  escape-room-bot:
+    build: .
+    env_file: .env
+    environment:
+      DATABASE_PATH: /data/escape_room.db
+    volumes:
+      - escape_room_data:/data
+    restart: unless-stopped
+
+volumes:
+  escape_room_data:

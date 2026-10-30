@@ -10,7 +10,12 @@ It asks for your bot token (typed input is hidden), then:
 1. writes ``.env`` (token, a random webhook secret, the PythonAnywhere proxy),
 2. creates/upgrades the SQLite database and validates puzzles.json,
 3. points your web app's WSGI file at ``webhook_app.py``,
-4. tells Telegram to send updates to https://<you>.pythonanywhere.com/telegram.
+4. tells Telegram to send updates to https://<you>.pythonanywhere.com/telegram,
+5. turns on the Mini App (the visual room screen) at /app and adds a "Play"
+   button next to the message box in the bot's private chat.
+
+For Mini App buttons inside 2v2 groups, create a direct link with
+@BotFather's /newapp and pass it with ``--miniapp-link https://t.me/<bot>/<name>``.
 
 Afterwards, press "Reload" on the Web tab. Re-running it is safe; it keeps
 an existing token and secret unless you pass ``--new-token``.
@@ -94,6 +99,9 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--domain", help="web app domain (default: <username>.pythonanywhere.com)")
     parser.add_argument("--new-token", action="store_true", help="ask for the bot token again")
+    parser.add_argument("--miniapp-link", help="direct Mini App link from @BotFather /newapp, "
+                                               "e.g. https://t.me/MyBot/room (enables the button in groups)")
+    parser.add_argument("--no-miniapp", action="store_true", help="don't enable the Mini App room screen")
     parser.add_argument("--remove-webhook", action="store_true",
                         help="delete the Telegram webhook (switch back to polling) and exit")
     args = parser.parse_args(argv)
@@ -128,6 +136,15 @@ def main(argv: list[str] | None = None) -> int:
     env["WEBHOOK_SECRET"] = env.get("WEBHOOK_SECRET") or secrets.token_urlsafe(32)
     if proxy:
         env["TELEGRAM_PROXY_URL"] = proxy
+    if args.no_miniapp:
+        env.pop("WEBAPP_URL", None)
+        env.pop("MINIAPP_LINK", None)
+    else:
+        env["WEBAPP_URL"] = f"https://{domain}/app"
+        if args.miniapp_link:
+            if not re.match(r"^https://t\.me/\w+/\w+$", args.miniapp_link):
+                fail("--miniapp-link should look like https://t.me/YourBot/appname")
+            env["MINIAPP_LINK"] = args.miniapp_link
     write_env(ENV_PATH, env)
     os.environ.update(env)  # so the checks below use exactly what was saved
     print("2/4  Saved settings to .env (private).")
@@ -167,6 +184,16 @@ def main(argv: list[str] | None = None) -> int:
     if not result.get("ok"):
         fail(f"Telegram refused the webhook: {result.get('description')}")
     print(f"4/4  Telegram will now send updates to {url}")
+
+    if env.get("WEBAPP_URL"):
+        menu = {"type": "web_app", "text": "Play", "web_app": {"url": env["WEBAPP_URL"]}}
+        result = telegram(token, "setChatMenuButton", {"menu_button": menu}, proxy)
+        if result.get("ok"):
+            print(f"     Room screen (Mini App) is on: {env['WEBAPP_URL']}")
+        else:
+            print(f"     ⚠️ Couldn't add the Play button: {result.get('description')}")
+    else:
+        telegram(token, "setChatMenuButton", {"menu_button": {"type": "commands"}}, proxy)
 
     print(
         "\n🎉 Almost done! Last step:\n"

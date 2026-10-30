@@ -1,9 +1,12 @@
-"""Loading and validating the puzzle set from ``puzzles/puzzles.json``.
+"""Loading and validating puzzles from ``puzzles/puzzles.json``.
 
 Puzzles are pure data: the engine never hard-codes any puzzle content.
-When a match is created the current puzzle set is snapshotted into the
-match row, so editing the JSON file later never changes a match that is
-already in progress, and both sides are guaranteed identical content.
+
+The file is a *pool*: it may hold several puzzles for the same room. When a
+match is created, one puzzle per room is drawn at random (a
+:class:`PuzzleSet`) and snapshotted into the match row. Both sides of a
+match therefore always get the identical seven puzzles, editing the file
+never changes a match in progress, and repeat games differ.
 """
 
 from __future__ import annotations
@@ -11,6 +14,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import secrets
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -27,6 +31,7 @@ class PuzzleError(ValueError):
 
 @dataclass(frozen=True)
 class Puzzle:
+    id: str
     room: int
     title: str
     difficulty: str
@@ -83,7 +88,12 @@ def _parse_puzzle(entry: Any, assets_dir: Path | None) -> Puzzle:
         if assets_dir is not None and not (assets_dir / image).is_file():
             raise PuzzleError(f"Room {room}: image file not found: {assets_dir / image}")
 
+    puzzle_id = entry.get("id")
+    if puzzle_id is not None and (not isinstance(puzzle_id, str) or not puzzle_id.strip()):
+        raise PuzzleError(f"Room {room}: 'id' must be a non-empty string")
+
     return Puzzle(
+        id=(puzzle_id or "").strip(),
         room=room,
         title=_require_str(entry, "title", room),
         difficulty=_require_str(entry, "difficulty", room),
@@ -141,7 +151,57 @@ class PuzzleSet:
         return cls.from_data(json.loads(text), assets_dir=None)
 
 
-def load_puzzles(path: str | Path, assets_dir: str | Path | None = None) -> PuzzleSet:
+class PuzzleLibrary:
+    """Every puzzle in the file, grouped by room (one or more per room)."""
+
+    def __init__(self, puzzles: list[Puzzle]):
+        by_room: dict[int, list[Puzzle]] = {}
+        for puzzle in puzzles:
+            by_room.setdefault(puzzle.room, []).append(puzzle)
+        if sorted(by_room) != list(range(1, TOTAL_ROOMS + 1)):
+            raise PuzzleError(
+                f"The puzzle file needs at least one puzzle for every room 1..{TOTAL_ROOMS}; "
+                f"found rooms {sorted(by_room)}"
+            )
+        # Give puzzles without an explicit id a stable one: room<N>-<position>.
+        seen: set[str] = set()
+        self._by_room: dict[int, tuple[Puzzle, ...]] = {}
+        for room, entries in sorted(by_room.items()):
+            named = []
+            for position, puzzle in enumerate(entries, start=1):
+                if not puzzle.id:
+                    puzzle = Puzzle(**{**puzzle.__dict__, "id": f"room{room}-{position}"})
+                if puzzle.id in seen:
+                    raise PuzzleError(f"Duplicate puzzle id {puzzle.id!r}")
+                seen.add(puzzle.id)
+                named.append(puzzle)
+            self._by_room[room] = tuple(named)
+
+    def options(self, room: int) -> tuple[Puzzle, ...]:
+        return self._by_room[room]
+
+    def __iter__(self):
+        return (p for room in sorted(self._by_room) for p in self._by_room[room])
+
+    def __len__(self) -> int:
+        return sum(len(v) for v in self._by_room.values())
+
+    def draw(self, rng=None, avoid: frozenset[str] | set[str] = frozenset()) -> PuzzleSet:
+        """Pick one puzzle per room at random.
+
+        Puzzles whose ids are in ``avoid`` (e.g. the ones a player had in
+        their previous match) are skipped whenever the room has another option.
+        """
+        rng = rng or secrets.SystemRandom()
+        chosen = []
+        for room in sorted(self._by_room):
+            options = self._by_room[room]
+            fresh = [p for p in options if p.id not in avoid] or list(options)
+            chosen.append(rng.choice(fresh))
+        return PuzzleSet(chosen)
+
+
+def load_puzzles(path: str | Path, assets_dir: str | Path | None = None) -> PuzzleLibrary:
     path = Path(path)
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -149,7 +209,11 @@ def load_puzzles(path: str | Path, assets_dir: str | Path | None = None) -> Puzz
         raise PuzzleError(f"Puzzle file not found: {path}") from exc
     except json.JSONDecodeError as exc:
         raise PuzzleError(f"Puzzle file is not valid JSON: {exc}") from exc
-    return PuzzleSet.from_data(data, Path(assets_dir) if assets_dir else None)
+    entries = data.get("puzzles") if isinstance(data, dict) else data
+    if not isinstance(entries, list):
+        raise PuzzleError("Puzzle file must be a list or an object with a 'puzzles' list")
+    assets = Path(assets_dir) if assets_dir else None
+    return PuzzleLibrary([_parse_puzzle(entry, assets) for entry in entries])
 
 
 class PuzzleProvider:
@@ -159,10 +223,10 @@ class PuzzleProvider:
         self.path = Path(path)
         self.assets_dir = assets_dir
         self._mtime: float | None = None
-        self._current: PuzzleSet | None = None
+        self._current: PuzzleLibrary | None = None
         self.get()  # fail fast on a broken file
 
-    def get(self) -> PuzzleSet:
+    def get(self) -> PuzzleLibrary:
         try:
             mtime = self.path.stat().st_mtime
             if self._current is None or mtime != self._mtime:

@@ -14,15 +14,19 @@ from puzzle_manager import PuzzleSet
 
 OPEN_STATUSES = ("lobby", "active")
 GROUP_CHAT_TYPES = ("group", "supergroup")
+# Pseudo chat type for actions coming from the Mini App: the side is the
+# user's own match, and in 2v2 the action is echoed to the team group.
+MINIAPP = "miniapp"
 
 
 @dataclass(frozen=True)
 class Button:
-    """A Telegram-agnostic inline button (callback data *or* URL)."""
+    """A Telegram-agnostic inline button (callback data, URL or Mini App URL)."""
 
     label: str
     callback: str | None = None
     url: str | None = None
+    web_app: str | None = None
 
 
 class GameError(Exception):
@@ -40,6 +44,7 @@ class SideContext:
     team: sqlite3.Row
     opponent: sqlite3.Row
     user_id: int
+    via: str = "chat"
 
     @property
     def mode(self) -> str:
@@ -196,14 +201,14 @@ def resolve_side(
       a registered member of that team. This is what stops an unrelated group
       or an outsider from controlling a team's game.
     """
-    if chat_type == "private":
+    if chat_type in ("private", MINIAPP):
         part = find_open_participation(conn, user_id) or find_last_participation(conn, user_id)
         if part is None:
             raise GameError(
                 "🙈 You're not in a match right now. Use /create to start one or "
                 "/join CODE to join one."
             )
-        if part["mode"] == "2v2" and require_team_chat:
+        if part["mode"] == "2v2" and require_team_chat and chat_type == "private":
             raise GameError(
                 "👥 This is a 2v2 match - please do that in your team group, so your "
                 "teammate sees it too."
@@ -221,7 +226,8 @@ def resolve_side(
         raise GameError("This chat type isn't supported.")
 
     match = get_match(conn, team["match_id"])
-    return SideContext(match=match, team=team, opponent=get_opponent(conn, team), user_id=user_id)
+    return SideContext(match=match, team=team, opponent=get_opponent(conn, team), user_id=user_id,
+                       via=MINIAPP if chat_type == MINIAPP else "chat")
 
 
 class PuzzleCache:

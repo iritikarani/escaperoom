@@ -27,6 +27,7 @@ from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     Update,
+    WebAppInfo,
 )
 from telegram.constants import ChatMemberStatus, ChatType, ParseMode
 from telegram.ext import (
@@ -92,7 +93,8 @@ def keyboard(buttons: list[list[Button]] | None) -> InlineKeyboardMarkup | None:
     return InlineKeyboardMarkup(
         [
             [
-                InlineKeyboardButton(b.label, url=b.url) if b.url
+                InlineKeyboardButton(b.label, web_app=WebAppInfo(b.web_app)) if b.web_app
+                else InlineKeyboardButton(b.label, url=b.url) if b.url
                 else InlineKeyboardButton(b.label, callback_data=b.callback)
                 for b in row
             ]
@@ -110,6 +112,13 @@ MODE_MENU = [
     [Button("⬅️ Back", callback="menu:home")],
 ]
 BACK = [[Button("⬅️ Back to menu", callback="menu:home")]]
+
+
+def main_menu(settings: Settings) -> list[list[Button]]:
+    """The main menu, plus a Mini App button when the room screen is set up."""
+    if not settings.webapp_url:
+        return MAIN_MENU
+    return [[Button("🚪 Enter the room", web_app=settings.webapp_url)], *MAIN_MENU]
 
 
 async def reply(update: Update, text: str | None, buttons: list[list[Button]] | None = None,
@@ -166,7 +175,7 @@ async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await do_join(update, context, payload)
         return
     if update.effective_chat.type == ChatType.PRIVATE:
-        await reply(update, msg.WELCOME, MAIN_MENU)
+        await reply(update, msg.WELCOME, main_menu(services(context).settings))
     else:
         await reply(update, msg.GROUP_INTRO)
 
@@ -216,7 +225,11 @@ async def hint_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def status_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat, user = update.effective_chat, update.effective_user
-    await respond(update, context, services(context).engine.status(user.id, chat.id, chat.type))
+    svc = services(context)
+    outcome = svc.engine.status(user.id, chat.id, chat.type)
+    if chat.type == ChatType.PRIVATE and svc.settings.webapp_url and outcome.buttons is None:
+        outcome.buttons = [[Button("🚪 Enter the room", web_app=svc.settings.webapp_url)]]
+    await respond(update, context, outcome)
 
 
 async def quit_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -269,7 +282,7 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
     await query.answer()
     if data == "menu:home":
-        await edit(msg.WELCOME, MAIN_MENU)
+        await edit(msg.WELCOME, main_menu(svc.settings))
     elif data == "menu:create":
         await edit("Choose a game mode:", MODE_MENU)
     elif data == "menu:join":

@@ -71,6 +71,11 @@ def room_message(puzzle: Puzzle, mode: str, header: str | None = None) -> str:
     return "\n".join(lines)
 
 
+def app_guess_echo(name: str, guess: str, correct: bool) -> str:
+    verdict = "✅ Correct!" if correct else "❌ Not quite."
+    return f"🔎 <b>{escape(name)}</b> tried <code>{escape(guess[:100])}</code> in the room - {verdict}"
+
+
 def unlock_header(solved_room: int, solver: str | None) -> str:
     by = f" (solved by {escape(solver)})" if solver else ""
     return (

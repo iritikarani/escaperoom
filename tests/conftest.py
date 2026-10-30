@@ -21,8 +21,11 @@ from state import PuzzleCache
 
 PUZZLES_PATH = BASE_DIR / "puzzles" / "puzzles.json"
 ASSETS_DIR = BASE_DIR / "assets" / "puzzle_images"
-ANSWERS = {p["room"]: p["accepted_answers"][0]
-           for p in json.loads(PUZZLES_PATH.read_text())["puzzles"]}
+# Gameplay tests run with the first puzzle listed for each room (see the
+# autouse fixture below), so these are the answers they play with.
+ANSWERS = {}
+for _p in json.loads(PUZZLES_PATH.read_text())["puzzles"]:
+    ANSWERS.setdefault(_p["room"], _p["accepted_answers"][0])
 
 GROUP_A = -1001
 GROUP_B = -1002
@@ -117,6 +120,20 @@ class World:
         for room in rooms:
             out = self.answer(user_id, chat_id, chat_type, ANSWERS[room])
             assert out.text is None, f"room {room}: {out.text}"
+
+
+class FirstChoice:
+    """Stand-in for random.SystemRandom that always picks the first option."""
+
+    def choice(self, seq):
+        return seq[0]
+
+
+@pytest.fixture(autouse=True)
+def deterministic_puzzles(monkeypatch):
+    """Matches normally draw random puzzles; tests use a fixed draw."""
+    import puzzle_manager
+    monkeypatch.setattr(puzzle_manager.secrets, "SystemRandom", FirstChoice)
 
 
 @pytest.fixture

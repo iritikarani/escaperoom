@@ -31,7 +31,7 @@ from collections import OrderedDict
 from pathlib import Path
 from typing import Any, Callable
 
-from telegram import LinkPreviewOptions
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, LinkPreviewOptions, WebAppInfo
 from telegram.constants import ParseMode
 from telegram.error import BadRequest, ChatMigrated, Forbidden, RetryAfter, TelegramError
 
@@ -52,9 +52,45 @@ def enqueue_text(
     now: float,
     match_id: str | None = None,
     kind: str = "text",
+    buttons: list[list[dict]] | None = None,
 ) -> bool:
-    """Queue an HTML text message. Returns False if the key already existed."""
-    return _enqueue(conn, chat_id, match_id, kind, {"type": "text", "text": text}, dedupe_key, now)
+    """Queue an HTML text message. Returns False if the key already existed.
+
+    ``buttons`` are rows of ``{"text": ..., "web_app": url}`` or
+    ``{"text": ..., "url": url}`` dicts, sent as an inline keyboard.
+    """
+    payload = {"type": "text", "text": text}
+    if buttons:
+        payload["buttons"] = buttons
+    return _enqueue(conn, chat_id, match_id, kind, payload, dedupe_key, now)
+
+
+def room_buttons(settings, chat_id: int | None) -> list[list[dict]] | None:
+    """The "Enter the room" button for a room message, if the Mini App is set up.
+
+    Telegram allows Mini App (web_app) buttons only in private chats; in groups
+    the closest option is a direct Mini App link created with BotFather.
+    """
+    if chat_id is None:
+        return None
+    if chat_id > 0 and settings.webapp_url:
+        return [[{"text": "🚪 Enter the room", "web_app": settings.webapp_url}]]
+    if chat_id < 0 and settings.miniapp_link:
+        return [[{"text": "🚪 Enter the room", "url": settings.miniapp_link}]]
+    return None
+
+
+def _markup(buttons: list[list[dict]] | None) -> InlineKeyboardMarkup | None:
+    if not buttons:
+        return None
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton(b["text"], web_app=WebAppInfo(b["web_app"])) if "web_app" in b
+            else InlineKeyboardButton(b["text"], url=b["url"])
+            for b in row
+        ]
+        for row in buttons
+    ])
 
 
 def enqueue_photo(
@@ -170,7 +206,12 @@ class Notifier:
                 if payload.get("type") == "text" and "parse" in str(exc).lower():
                     # Malformed HTML in puzzle content: fall back to plain text
                     # rather than withholding the puzzle.
-                    payload = {"type": "text", "text": _TAG.sub("", payload["text"]), "plain": True}
+                    payload = {**payload, "text": _TAG.sub("", payload["text"]), "plain": True}
+                    continue
+                if payload.get("buttons") and "button" in str(exc).lower():
+                    # e.g. a Mini App button Telegram won't accept here: the
+                    # message matters more than the button.
+                    payload = {k: v for k, v in payload.items() if k != "buttons"}
                     continue
                 return self._fail(row, f"bad request: {exc}")
             except FileNotFoundError as exc:
@@ -205,6 +246,7 @@ class Notifier:
                 text=payload["text"],
                 parse_mode=None if payload.get("plain") else ParseMode.HTML,
                 link_preview_options=LinkPreviewOptions(is_disabled=True),
+                reply_markup=_markup(payload.get("buttons")),
             )
 
     def _fail(self, row: sqlite3.Row, error: str) -> str:

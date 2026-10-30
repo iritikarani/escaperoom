@@ -71,6 +71,12 @@ class Settings:
     # Outbound HTTP proxy for Telegram API calls. PythonAnywhere's free plan
     # only allows outbound traffic through http://proxy.server:3128.
     telegram_proxy_url: str = ""
+    # Public HTTPS address of the Mini App page (webhook hosting only), e.g.
+    # https://you.pythonanywhere.com/app. Empty = Mini App disabled.
+    webapp_url: str = ""
+    # Optional direct link from BotFather's /newapp (https://t.me/<bot>/<name>).
+    # Telegram only allows Mini App buttons in groups via such a link.
+    miniapp_link: str = ""
     log_level: str = "INFO"
 
 
@@ -99,5 +105,7 @@ def load_settings(require_token: bool = True) -> Settings:
         webhook_port=_int("PORT", _int("WEBHOOK_PORT", 8443)),
         webhook_secret=os.getenv("WEBHOOK_SECRET", "").strip(),
         telegram_proxy_url=os.getenv("TELEGRAM_PROXY_URL", "").strip(),
+        webapp_url=os.getenv("WEBAPP_URL", "").strip(),
+        miniapp_link=os.getenv("MINIAPP_LINK", "").strip(),
         log_level=os.getenv("LOG_LEVEL", "INFO").strip().upper() or "INFO",
     )

@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import asyncio
 import hmac
+import html
 import json
 import logging
 import mimetypes
@@ -41,6 +42,7 @@ log = logging.getLogger("escape_room.webhook")
 WEBHOOK_PATH = "/telegram"
 MAX_BODY_BYTES = 1_000_000
 MINIAPP_PAGE = BASE_DIR / "miniapp" / "index.html"
+PRIVACY_PAGE = BASE_DIR / "static" / "privacy.html"
 
 _loop = asyncio.new_event_loop()
 _app: Application | None = None
@@ -102,6 +104,20 @@ def _serve_image(start_response, name: str):
     return _respond(start_response, "200 OK", path.read_bytes(), content_type, "public, max-age=3600")
 
 
+def _privacy_page(start_response):
+    """Public privacy policy, for BotFather's "Edit Privacy Policy" link."""
+    contact = load_settings(require_token=False).privacy_contact
+    if contact:
+        name = html.escape(contact)
+        link = (f'<a href="https://t.me/{html.escape(contact.lstrip("@"))}">{name}</a>'
+                if contact.startswith("@") else name)
+        line = f"message {link} on Telegram."
+    else:
+        line = "contact the bot's owner through Telegram."
+    page = PRIVACY_PAGE.read_text(encoding="utf-8").replace("CONTACT_LINE", line)
+    return _respond(start_response, "200 OK", page.encode(), "text/html; charset=utf-8", "public, max-age=3600")
+
+
 def _miniapp_api(environ, start_response, action: str):
     app = _get_app()
     svc = app.bot_data["services"]
@@ -140,6 +156,8 @@ def application(environ, start_response):
 
     if method == "GET" and path in ("/", "/health"):
         return _respond(start_response, "200 OK", b"Escape Room bot is running.\n")
+    if method == "GET" and path in ("/privacy", "/privacy/"):
+        return _privacy_page(start_response)
     if method == "GET" and path in ("/app", "/app/"):
         return _respond(start_response, "200 OK", MINIAPP_PAGE.read_bytes(), "text/html; charset=utf-8")
     if method == "GET" and path.startswith("/app/img/"):

@@ -154,3 +154,23 @@ async def test_maintenance_retries_pending_and_expires_lobbies(tmp_path):
     assert "expired" in fake.sent_to(1)
     assert svc.db.query_one("SELECT COUNT(*) AS n FROM outbox WHERE status = 'pending'")["n"] == 0
     svc.db.close()
+
+
+def test_privacy_page_is_public(wsgi, monkeypatch):
+    monkeypatch.setenv("PRIVACY_CONTACT", "@owner_name")
+    environ = {"REQUEST_METHOD": "GET", "PATH_INFO": "/privacy", "CONTENT_LENGTH": "0",
+               "wsgi.input": io.BytesIO(b"")}
+    out = {}
+    body = b"".join(webhook_app.application(environ, lambda s, h: out.update(status=s, headers=dict(h))))
+    assert out["status"] == "200 OK" and out["headers"]["Content-Type"].startswith("text/html")
+    page = body.decode()
+    assert "Privacy Policy" in page and "CONTACT_LINE" not in page
+    assert 'href="https://t.me/owner_name"' in page
+
+
+def test_privacy_page_without_contact(wsgi, monkeypatch):
+    monkeypatch.setenv("PRIVACY_CONTACT", "")
+    environ = {"REQUEST_METHOD": "GET", "PATH_INFO": "/privacy", "CONTENT_LENGTH": "0",
+               "wsgi.input": io.BytesIO(b"")}
+    page = b"".join(webhook_app.application(environ, lambda s, h: None)).decode()
+    assert "contact the bot's owner" in page and "CONTACT_LINE" not in page

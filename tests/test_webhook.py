@@ -116,14 +116,14 @@ def test_setup_script_writes_env_and_sets_webhook(tmp_path, monkeypatch):
     monkeypatch.setattr(setup, "ENV_PATH", tmp_path / ".env")
     monkeypatch.setattr(setup, "telegram", fake_telegram)
     monkeypatch.setattr(setup.getpass, "getpass", lambda prompt="": token)
-    monkeypatch.setattr(setup.getpass, "getuser", lambda: "unknowngamer")
+    monkeypatch.setattr(setup.getpass, "getuser", lambda: "example")
     monkeypatch.setenv("DATABASE_PATH", str(tmp_path / "x.db"))
     assert setup.main([]) == 0
 
     env = setup.read_env(tmp_path / ".env")
     assert env["TELEGRAM_BOT_TOKEN"] == token and len(env["WEBHOOK_SECRET"]) >= 32
     hook = dict(calls)["setWebhook"]
-    assert hook["url"] == "https://unknowngamer.pythonanywhere.com/telegram"
+    assert hook["url"] == "https://example.pythonanywhere.com/telegram"
     assert hook["secret_token"] == env["WEBHOOK_SECRET"]
     assert (tmp_path / "x.db").exists()
 
@@ -173,4 +173,5 @@ def test_privacy_page_without_contact(wsgi, monkeypatch):
     environ = {"REQUEST_METHOD": "GET", "PATH_INFO": "/privacy", "CONTENT_LENGTH": "0",
                "wsgi.input": io.BytesIO(b"")}
     page = b"".join(webhook_app.application(environ, lambda s, h: None)).decode()
-    assert "contact the bot's owner" in page and "CONTACT_LINE" not in page
+    assert "CONTACT_LINE" not in page and "t.me/" not in page  # no owner details at all
+    assert "blocking it in Telegram." in page

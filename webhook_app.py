@@ -106,14 +106,14 @@ def _serve_image(start_response, name: str):
 
 def _privacy_page(start_response):
     """Public privacy policy, for BotFather's "Edit Privacy Policy" link."""
+    # The owner stays anonymous unless they choose to set PRIVACY_CONTACT.
     contact = load_settings(require_token=False).privacy_contact
+    line = ""
     if contact:
         name = html.escape(contact)
         link = (f'<a href="https://t.me/{html.escape(contact.lstrip("@"))}">{name}</a>'
                 if contact.startswith("@") else name)
-        line = f"message {link} on Telegram."
-    else:
-        line = "contact the bot's owner through Telegram."
+        line = f" To ask for your data to be deleted, message {link} on Telegram."
     page = PRIVACY_PAGE.read_text(encoding="utf-8").replace("CONTACT_LINE", line)
     return _respond(start_response, "200 OK", page.encode(), "text/html; charset=utf-8", "public, max-age=3600")
 

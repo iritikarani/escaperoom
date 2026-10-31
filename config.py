@@ -77,6 +77,9 @@ class Settings:
     # Optional direct link from BotFather's /newapp (https://t.me/<bot>/<name>).
     # Telegram only allows Mini App buttons in groups via such a link.
     miniapp_link: str = ""
+    # Shown on the /privacy page as the way to request data deletion,
+    # e.g. "@yourname" (webhook hosting only).
+    privacy_contact: str = ""
     log_level: str = "INFO"
 
 
@@ -107,5 +110,6 @@ def load_settings(require_token: bool = True) -> Settings:
         telegram_proxy_url=os.getenv("TELEGRAM_PROXY_URL", "").strip(),
         webapp_url=os.getenv("WEBAPP_URL", "").strip(),
         miniapp_link=os.getenv("MINIAPP_LINK", "").strip(),
+        privacy_contact=os.getenv("PRIVACY_CONTACT", "").strip(),
         log_level=os.getenv("LOG_LEVEL", "INFO").strip().upper() or "INFO",
     )

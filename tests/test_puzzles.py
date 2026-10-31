@@ -99,19 +99,18 @@ def test_both_sides_get_the_same_random_set(world, monkeypatch):
     match_id = world.setup_2v2()
     rooms = {chat: [t for t in world.texts(chat) if "ROOM 1 / 7" in t] for chat in (GROUP_A, GROUP_B)}
     assert len(rooms[GROUP_A]) == 1 and rooms[GROUP_A] == rooms[GROUP_B]
-    snapshot = PuzzleSet.from_json(world.match(match_id)["puzzle_snapshot"])
-    assert [p.id for p in snapshot] == [p.id for p in load_puzzles(PUZZLES_PATH).draw(rng=random.Random(7))]
+    assert len(world.snapshot_ids(match_id)) == 7
 
 
-def test_next_match_avoids_creators_previous_puzzles(world, monkeypatch):
+def test_next_match_avoids_puzzles_the_players_already_saw(world, monkeypatch):
+    """Without the bank, the puzzles.json pool still uses players' history."""
     import puzzle_manager
     seeds = iter(range(100))
     monkeypatch.setattr(puzzle_manager.secrets, "SystemRandom", lambda: random.Random(next(seeds)))
     first = world.setup_1v1()
-    world.engine.confirm_quit(2, first)
+    world.solve(1, 1, "private", range(1, 8))  # Alice sees all 7 rooms; Bob saw room 1
     second = world.setup_1v1()
-    ids = lambda m: {p.id for p in PuzzleSet.from_json(world.match(m)["puzzle_snapshot"])}
-    assert not ids(first) & ids(second)
+    assert not set(world.snapshot_ids(first)) & set(world.snapshot_ids(second))
 
 
 def test_old_snapshots_without_ids_still_load(library):

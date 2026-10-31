@@ -42,6 +42,7 @@ class Puzzle:
     image: str | None = None
     image_caption: str | None = None
     explanation: str | None = None
+    scene: str | None = None  # which object the room screen draws (optional)
 
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)
@@ -104,6 +105,7 @@ def _parse_puzzle(entry: Any, assets_dir: Path | None) -> Puzzle:
         image=image,
         image_caption=_require_str(entry, "image_caption", room, optional=True),
         explanation=_require_str(entry, "explanation", room, optional=True),
+        scene=_require_str(entry, "scene", room, optional=True),
     )
 
 

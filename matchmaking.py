@@ -30,7 +30,8 @@ from config import TEAM_SIZE, Settings
 from database import Database
 from game_engine import Outcome, enqueue_room
 from notifications import enqueue_text
-from puzzle_manager import PuzzleLibrary, PuzzleSet
+from puzzle_bank import PuzzleSelector
+from puzzle_manager import PuzzleLibrary
 from state import (
     GROUP_CHAT_TYPES,
     Button,
@@ -78,12 +79,14 @@ class CreatedMatch:
 
 class Matchmaking:
     def __init__(self, db: Database, puzzle_source: Callable[[], PuzzleLibrary], settings: Settings,
-                 clock: Clock = time.time, puzzles: PuzzleCache | None = None):
+                 clock: Clock = time.time, puzzles: PuzzleCache | None = None,
+                 selector: PuzzleSelector | None = None):
         self.db = db
         self.puzzle_source = puzzle_source
         self.settings = settings
         self.clock = clock
         self.puzzles = puzzles or PuzzleCache()
+        self.selector = selector or PuzzleSelector(puzzle_source)
 
     # -- users ------------------------------------------------------------
     def register_user(self, user_id: int, first_name: str | None, last_name: str | None,
@@ -124,9 +127,9 @@ class Matchmaking:
                     f"🎮 You're already in match <code>{existing['match_id']}</code>. "
                     "Finish it or use /quit before creating a new one."
                 )
-            # One random puzzle per room; both sides share this exact set. Skip
-            # the creator's previous puzzles where the pool has alternatives.
-            puzzles = library.draw(avoid=self._recent_puzzle_ids(conn, user_id))
+            # Provisional only: the real puzzles are chosen in _start, once every
+            # participant (and so every puzzle history) is known.
+            puzzles = library.draw()
             match_id = self._unique(conn, "SELECT 1 FROM matches WHERE match_id = ?", MATCH_ID_LENGTH)
             conn.execute(
                 """
@@ -152,19 +155,6 @@ class Matchmaking:
             )
         log.info("Match %s (%s) created by %s", match_id, mode, user_id)
         return CreatedMatch(match_id, mode, code_a, code_b)
-
-    def _recent_puzzle_ids(self, conn: sqlite3.Connection, user_id: int) -> set[str]:
-        row = conn.execute(
-            """
-            SELECT m.puzzle_snapshot FROM team_members tm JOIN matches m ON m.match_id = tm.match_id
-            WHERE tm.user_id = ? AND m.started_at IS NOT NULL
-            ORDER BY m.started_at DESC LIMIT 1
-            """,
-            (user_id,),
-        ).fetchone()
-        if row is None:
-            return set()
-        return {p.id for p in PuzzleSet.from_json(row["puzzle_snapshot"])}
 
     def _unique(self, conn: sqlite3.Connection, sql: str, length: int) -> str:
         for _ in range(20):
@@ -340,6 +330,13 @@ class Matchmaking:
         )
         if cur.rowcount != 1:
             return
+        # One combination for the whole match, chosen from every participant's
+        # puzzle history. Both sides (all players) play exactly these puzzles.
+        players = [r["user_id"] for r in conn.execute(
+            "SELECT user_id FROM team_members WHERE match_id = ?", (match_id,))]
+        puzzles = self.selector.choose(conn, players, match_id, now)
+        conn.execute("UPDATE matches SET puzzle_snapshot = ? WHERE match_id = ?", (puzzles.to_json(), match_id))
+        self.puzzles.forget(match_id)
         match = get_match(conn, match_id)
         teams = get_teams(conn, match_id)
         for team, opponent in ((teams[0], teams[1]), (teams[1], teams[0])):

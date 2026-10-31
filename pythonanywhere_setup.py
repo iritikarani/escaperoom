@@ -152,14 +152,21 @@ def main(argv: list[str] | None = None) -> int:
     sys.path.insert(0, str(BASE_DIR))
     from config import load_settings
     from database import Database
+    from puzzle_bank import backfill_history, bank_counts, import_bank, sync_curated
     from puzzle_manager import load_puzzles
 
     settings = load_settings()
-    load_puzzles(settings.puzzles_path, settings.assets_dir)
+    library = load_puzzles(settings.puzzles_path, settings.assets_dir)
     db = Database(settings.database_path)
     version = db.migrate()
+    print("3/4  Loading the puzzle bank (first time: about a minute)...")
+    import_bank(db)
+    sync_curated(db, library)
+    backfill_history(db)
+    with db.transaction() as conn:
+        counts = bank_counts(conn)
     db.close()
-    print(f"3/4  Database ready (schema v{version}), puzzles OK.")
+    print(f"     Database ready (schema v{version}): {counts['puzzles']} puzzles in {counts['sets']} sets.")
 
     wsgi_path = Path("/var/www") / f"{domain.replace('.', '_')}_wsgi.py"
     if wsgi_path.parent.is_dir():

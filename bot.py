@@ -50,6 +50,7 @@ from game_engine import GameEngine, Outcome
 from hint_manager import HintManager
 from matchmaking import Matchmaking, normalize_code
 from notifications import Notifier
+from puzzle_bank import backfill_history, bank_counts, import_bank, sync_curated
 from puzzle_manager import PuzzleError, PuzzleProvider
 from state import Button, GameError, PuzzleCache
 
@@ -73,6 +74,7 @@ class Services:
         db = Database(settings.database_path)
         db.migrate()
         provider = PuzzleProvider(settings.puzzles_path, settings.assets_dir)
+        sync_curated(db, provider.get())  # keep puzzles.json edits in the bank
         cache = PuzzleCache()
         return cls(
             settings=settings,
@@ -474,7 +476,7 @@ def build_application(svc: Services, request=None) -> Application:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Competitive Escape Room Telegram bot")
     parser.add_argument("--init-db", action="store_true",
-                        help="create/upgrade the database, validate puzzles.json and exit")
+                        help="create/upgrade the database, load the puzzle bank, validate puzzles.json and exit")
     parser.add_argument("--maintenance", action="store_true",
                         help="expire lobbies and retry pending messages once, then exit "
                              "(for webhook hosts such as PythonAnywhere; run as a scheduled task)")
@@ -496,8 +498,15 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     if args.init_db:
+        added = import_bank(svc.db)
+        backfilled = backfill_history(svc.db)
+        with svc.db.transaction() as conn:
+            counts = bank_counts(conn)
         print(f"Database ready at {settings.database_path} (schema v{svc.db.schema_version()}); "
               f"puzzles OK ({settings.puzzles_path}).")
+        print(f"Puzzle bank: {counts['puzzles']} puzzles in {counts['sets']} sets "
+              f"({counts['generated']} generated, {counts['curated']} hand-written; {added} newly imported). "
+              f"Player history rows rebuilt from past matches: {backfilled}.")
         svc.db.close()
         return 0
 

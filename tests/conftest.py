@@ -31,6 +31,16 @@ GROUP_A = -1001
 GROUP_B = -1002
 
 
+def match_answer(db, user_id: int, room: int) -> str:
+    """The correct answer for ``room`` in the user's latest match (its saved puzzles)."""
+    from puzzle_manager import PuzzleSet
+    row = db.query_one(
+        "SELECT m.puzzle_snapshot FROM team_members tm JOIN matches m ON m.match_id = tm.match_id "
+        "WHERE tm.user_id = ? "
+        "ORDER BY m.status IN ('lobby', 'active') DESC, m.created_at DESC, m.rowid DESC LIMIT 1", (user_id,))
+    return PuzzleSet.from_json(row["puzzle_snapshot"]).get(room).accepted_answers[0]
+
+
 class FakeClock:
     def __init__(self, start: float = 1_700_000_000.0):
         self.now = start
@@ -116,9 +126,17 @@ class World:
     def answer(self, user_id: int, chat_id: int, chat_type: str, guess: str):
         return self.engine.submit_answer(user_id, chat_id, chat_type, guess)
 
+    def answer_for(self, user_id: int, room: int) -> str:
+        """The correct answer for ``room`` in the user's current (or last) match."""
+        return match_answer(self.db, user_id, room)
+
+    def snapshot_ids(self, match_id: str) -> list[str]:
+        from puzzle_manager import PuzzleSet
+        return [p.id for p in PuzzleSet.from_json(self.match(match_id)["puzzle_snapshot"])]
+
     def solve(self, user_id: int, chat_id: int, chat_type: str, rooms) -> None:
         for room in rooms:
-            out = self.answer(user_id, chat_id, chat_type, ANSWERS[room])
+            out = self.answer(user_id, chat_id, chat_type, self.answer_for(user_id, room))
             assert out.text is None, f"room {room}: {out.text}"
 
 
@@ -127,6 +145,9 @@ class FirstChoice:
 
     def choice(self, seq):
         return seq[0]
+
+    def random(self):
+        return 0.0  # ties keep file order, so the first unseen option wins
 
 
 @pytest.fixture(autouse=True)

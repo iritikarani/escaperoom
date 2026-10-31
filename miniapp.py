@@ -160,7 +160,7 @@ class MiniAppAPI:
                     "question": puzzle.question,
                     "image": f"/app/img/{puzzle.image}" if puzzle.image else None,
                     "image_caption": puzzle.image_caption,
-                    "scene": scene_for(puzzle.id),
+                    "scene": puzzle.scene or scene_for(puzzle.id),
                     "hints": list(puzzle.hints[:revealed]),
                     "hints_total": len(puzzle.hints),
                 }

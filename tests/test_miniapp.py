@@ -12,7 +12,7 @@ import pytest
 
 import webhook_app
 from miniapp import scene_for, verify_init_data
-from tests.conftest import ANSWERS
+from tests.conftest import match_answer
 from tests.test_e2e import FakeTelegram, callback, codes_in, message
 
 TOKEN = "123456:TEST"
@@ -107,6 +107,10 @@ def hook(update):
     return request("POST", "/telegram", update, {"HTTP_X_TELEGRAM_BOT_API_SECRET_TOKEN": "hook"})
 
 
+def answer(user_id, room):
+    return match_answer(webhook_app._app.bot_data["services"].db, user_id, room)
+
+
 def api(action, user_id, name="Alice", **extra):
     res = request("POST", f"/api/{action}", {"initData": signed(user_id, name), **extra})
     return res["status"], json.loads(res["body"])
@@ -172,7 +176,7 @@ def test_play_a_room_from_the_app(site):
     assert body["correct"] is False and body["message"]
     assert body["state"]["you"]["room"] == 1
 
-    body = api("answer", 1, guess=ANSWERS[1])[1]
+    body = api("answer", 1, guess=answer(1, 1))[1]
     assert body["correct"] is True and body["state"]["puzzle"]["room"] == 2
     # Chat side effects still happen: opponent alert and the next room in chat
     assert "Your opponent just reached <b>Room 2</b>" in fake.sent_to(2)
@@ -193,11 +197,12 @@ def test_hint_from_the_app_gives_opponent_free_hint(site):
 
 def test_state_never_leaks_opponent_details(site):
     start_1v1(site)
-    api("answer", 1, guess=ANSWERS[1])
+    api("answer", 1, guess=answer(1, 1))
     bob = api("state", 2, "Bob")[1]["state"]
     assert set(bob["opponent"]) == {"name", "room"}
     assert bob["puzzle"]["room"] == 1  # Bob still sees his own room only
-    assert "accepted_answers" not in json.dumps(bob) and ANSWERS[1] not in json.dumps(bob["puzzle"])
+    assert "accepted_answers" not in json.dumps(bob) and "solution" not in json.dumps(bob)
+    assert answer(2, 1) not in json.dumps(bob["puzzle"])
 
 
 def test_2v2_app_guesses_are_shown_to_the_team_group(site):
@@ -206,7 +211,7 @@ def test_2v2_app_guesses_are_shown_to_the_team_group(site):
     api("answer", 2, "Ben", guess="wrong idea")
     assert "Ben</b> tried <code>wrong idea</code>" in fake.sent_to(-101)
     assert "wrong idea" not in fake.sent_to(-102)
-    api("answer", 1, "Ann", guess=ANSWERS[1])
+    api("answer", 1, "Ann", guess=answer(1, 1))
     assert "✅ Correct!" in fake.sent_to(-101) and "ROOM 2 UNLOCKED" in fake.sent_to(-101)
     assert api("state", 2, "Ben")[1]["state"]["you"]["room"] == 2  # shared team progress
 
@@ -214,7 +219,7 @@ def test_2v2_app_guesses_are_shown_to_the_team_group(site):
 def test_finished_match_shows_result(site):
     start_1v1(site)
     for room in range(1, 8):
-        api("answer", 1, guess=ANSWERS[room])
+        api("answer", 1, guess=answer(1, room))
     assert api("state", 1)[1]["state"]["result"] == {"won": True, "reason": "escaped"}
     assert api("state", 2, "Bob")[1]["state"]["result"]["won"] is False
 
@@ -240,9 +245,10 @@ def test_chat_gets_short_room_ready_message_not_the_puzzle(site):
     start_1v1(fake)
     room = [t for t in fake.texts(1) if "ROOM 1 / 7" in t][0]
     assert "waiting inside" in room and "Enter the room" in room
-    assert "triangle" not in room  # the puzzle text only appears in the room screen
-    assert "triangle" in api("state", 1)[1]["state"]["puzzle"]["question"]
-    api("answer", 1, guess=ANSWERS[1])
+    question = api("state", 1)[1]["state"]["puzzle"]["question"]
+    first_line = question.split("\n")[0]
+    assert first_line and first_line not in room  # the puzzle text only appears in the room screen
+    api("answer", 1, guess=answer(1, 1))
     nxt = [t for t in fake.texts(1) if "ROOM 2 / 7" in t][0]
     assert "ROOM 2 UNLOCKED" in nxt and "waiting inside" in nxt
 
@@ -250,7 +256,7 @@ def test_chat_gets_short_room_ready_message_not_the_puzzle(site):
 def test_typed_answers_in_chat_still_work_with_the_room_screen(site):
     fake = site
     start_1v1(fake)
-    hook(message(1, "Alice", ANSWERS[1]))
+    hook(message(1, "Alice", answer(1, 1)))
     assert api("state", 1)[1]["state"]["you"]["room"] == 2
 
 

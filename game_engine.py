@@ -18,6 +18,7 @@ from answer_validator import canonical, is_correct, validate_guess
 from config import ESCAPED_ROOM, PAID_HINTS_PER_SIDE, TOTAL_ROOMS, Settings
 from database import Database
 from notifications import enqueue_photo, enqueue_text, room_buttons
+from puzzle_bank import record_encounter
 from state import (
     Button,
     MINIAPP,
@@ -67,6 +68,7 @@ def enqueue_room(
         return
     puzzle = puzzles.for_match(match).get(room)
     key = f"room:{team['team_id']}:{room}"
+    record_encounter(conn, match["match_id"], team["team_id"], puzzle.id, room, now)
     buttons = room_buttons(settings, team["chat_id"]) if settings else None
     enqueue_text(
         conn,
